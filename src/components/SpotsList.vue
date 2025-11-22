@@ -3,11 +3,14 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { showToast, showLoadingToast, closeToast, showSuccessToast } from 'vant'
 import { apiClient, type Spot, type Summit } from '../services/api'
 import { formatWotaId, formatSotaId, formatDateTime } from '../utils/formatters'
+import { gridRefToLatLon } from '../utils/gridReference'
+import { getCurrentPosition, findClosestSummit } from '../utils/geolocation'
 
 const spots = ref<Spot[]>([])
 const loading = ref(false)
 const spotsLimit = ref(5)
 const showForm = ref(false)
+const gpsLoading = ref(false)
 
 // Form data
 const formData = ref({
@@ -132,8 +135,18 @@ async function loadSpots(silent = false) {
 async function loadSummits() {
   try {
     const allSummits = await apiClient.summits.getAll()
-    // Filter out WOTA ID 0 (dummy entry)
-    summits.value = allSummits.filter(s => s.wotaid !== 0)
+    // Filter out WOTA ID 0 (dummy entry) and add computed lat/lon fields
+    summits.value = allSummits
+      .filter(s => s.wotaid !== 0)
+      .map(summit => {
+        // Compute lat/lon from grid reference
+        const coords = gridRefToLatLon(summit.reference)
+        return {
+          ...summit,
+          lat: coords?.lat,
+          lon: coords?.lon
+        }
+      })
   } catch (error) {
     console.error('Error loading summits:', error)
   }
@@ -176,6 +189,57 @@ function onSummitSelect(summit: Summit) {
   saveFormData()
 }
 
+async function useGpsLocation() {
+  gpsLoading.value = true
+  showLoadingToast({
+    message: 'Getting location...',
+    forbidClick: true,
+  })
+
+  try {
+    const position = await getCurrentPosition()
+
+    if (!position) {
+      closeToast()
+      showToast({
+        message: 'Could not get GPS location',
+        type: 'fail',
+      })
+      return
+    }
+
+    const closestSummit = findClosestSummit(position.lat, position.lon, summits.value)
+
+    if (!closestSummit) {
+      closeToast()
+      showToast({
+        message: 'No summits found nearby',
+        type: 'fail',
+      })
+      return
+    }
+
+    // Auto-select the closest summit
+    formData.value.summit = closestSummit
+    saveFormData()
+
+    closeToast()
+    showToast({
+      message: `Selected ${closestSummit.name}`,
+      duration: 2000,
+    })
+  } catch (error) {
+    closeToast()
+    showToast({
+      message: 'GPS error',
+      type: 'fail',
+    })
+    console.error('GPS error:', error)
+  } finally {
+    gpsLoading.value = false
+  }
+}
+
 function onCallsignClick(event: Event, callsign: string) {
   event.stopPropagation()
   const url = `https://qrz.com/db/${callsign}`
@@ -192,6 +256,20 @@ function onWotaClick(event: Event, wotaid: number) {
     url = `https://www.wota.org.uk/mm_ldo-${paddedId}`
   }
   window.open(url, '_blank')
+}
+
+function onSotaClick(event: Event, sotaid: number) {
+  event.stopPropagation()
+  const formattedSotaId = formatSotaId(sotaid)
+  if (formattedSotaId) {
+    const url = `https://www.sotadata.org.uk/en/summit/${formattedSotaId}`
+    window.open(url, '_blank')
+  }
+}
+
+function getSotaIdForSpot(wotaid: number): number | null {
+  const summit = summits.value.find(s => s.wotaid === wotaid)
+  return summit?.sotaid ?? null
 }
 
 function openForm() {
@@ -302,7 +380,16 @@ async function submitSpot() {
               >
                 {{ formatWotaId(spot.wotaid) }}
               </van-tag>
-              <van-tag type="success" size="medium">{{ spot.freqmode }}</van-tag>
+              <van-tag
+                v-if="getSotaIdForSpot(spot.wotaid)"
+                type="success"
+                size="medium"
+                class="clickable-tag"
+                @click="onSotaClick($event, getSotaIdForSpot(spot.wotaid)!)"
+              >
+                {{ formatSotaId(getSotaIdForSpot(spot.wotaid)!) }}
+              </van-tag>
+              <van-tag type="default" size="medium">{{ spot.freqmode }}</van-tag>
             </div>
             <div class="spot-comment" v-if="spot.comment">
               {{ spot.comment }}
@@ -348,7 +435,16 @@ async function submitSpot() {
             clickable
             @click="showSummitPicker = true"
             :rules="[{ required: true, message: 'Please select a summit' }]"
-          />
+          >
+            <template #button>
+              <van-icon
+                name="location-o"
+                size="20"
+                :class="['gps-icon', { 'gps-loading': gpsLoading }]"
+                @click.stop="useGpsLocation"
+              />
+            </template>
+          </van-field>
 
           <!-- Callsign Field -->
           <van-field
@@ -546,5 +642,29 @@ async function submitSpot() {
   display: flex;
   gap: 4px;
   margin-top: 4px;
+}
+
+.gps-icon {
+  color: #1989fa;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  padding: 4px;
+}
+
+.gps-icon:active {
+  opacity: 0.6;
+}
+
+.gps-loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 </style>

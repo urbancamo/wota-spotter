@@ -13,6 +13,9 @@ interface Summit {
   last_act_date: Date | null
   humpid: number | null
   gridid: string | null
+  // Computed fields from grid reference
+  lat?: number
+  lon?: number
 }
 
 interface Spot {

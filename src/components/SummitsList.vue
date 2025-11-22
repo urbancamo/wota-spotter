@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import { apiClient, type Summit } from '../services/api'
 import { formatSotaId, formatWotaId, formatHeight, formatDate } from '../utils/formatters'
+import { gridRefToLatLon } from '../utils/gridReference'
 
 const summits = ref<Summit[]>([])
 const searchValue = ref('')
@@ -23,8 +24,18 @@ async function loadSummits() {
 
   try {
     const allSummits = await apiClient.summits.getAll()
-    // Filter out WOTA ID 0 (dummy entry)
-    summits.value = allSummits.filter(s => s.wotaid !== 0)
+    // Filter out WOTA ID 0 (dummy entry) and add computed lat/lon fields
+    summits.value = allSummits
+      .filter(s => s.wotaid !== 0)
+      .map(summit => {
+        // Compute lat/lon from grid reference
+        const coords = gridRefToLatLon(summit.reference)
+        return {
+          ...summit,
+          lat: coords?.lat,
+          lon: coords?.lon
+        }
+      })
     closeToast()
     showToast({
       message: `Loaded ${summits.value.length} summits`,
@@ -133,6 +144,26 @@ function onCallsignClick(event: Event, callsign: string) {
   const url = `https://qrz.com/db/${callsign}`
   window.open(url, '_blank')
 }
+
+function onGridRefClick(event: Event, gridRef: string) {
+  // Stop event propagation to prevent the cell click
+  event.stopPropagation()
+
+  // Convert grid reference to lat/lon
+  const coords = gridRefToLatLon(gridRef)
+
+  if (coords) {
+    // Open OpenStreetMap centered on the coordinates
+    // Format: https://www.openstreetmap.org/?mlat=LAT&mlon=LON#map=ZOOM/LAT/LON
+    const url = `https://www.openstreetmap.org/?mlat=${coords.lat}&mlon=${coords.lon}#map=15/${coords.lat}/${coords.lon}`
+    window.open(url, '_blank')
+  } else {
+    showToast({
+      message: 'Invalid grid reference',
+      type: 'fail',
+    })
+  }
+}
 </script>
 
 <template>
@@ -200,7 +231,14 @@ function onCallsignClick(event: Event, callsign: string) {
               >
                 {{ formatSotaId(summit.sotaid) }}
               </van-tag>
-              <van-tag type="default" size="medium">{{ summit.reference }}</van-tag>
+              <van-tag
+                type="default"
+                size="medium"
+                class="clickable-tag"
+                @click="onGridRefClick($event, summit.reference)"
+              >
+                {{ summit.reference }}
+              </van-tag>
             </div>
             <div class="summit-meta">
               <span>{{ formatHeight(summit.height) }}</span>
