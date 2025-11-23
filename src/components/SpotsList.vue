@@ -422,6 +422,11 @@ function getSotaIdForSpot(wotaid: number): number | null {
   return summit?.sotaid ?? null
 }
 
+function getSummitName(wotaid: number): string | null {
+  const summit = summits.value.find(s => s.wotaid === wotaid)
+  return summit?.name ?? null
+}
+
 function openForm() {
   // Set defaults if freq and mode are not set
   if (!formData.value.freq) {
@@ -564,6 +569,9 @@ async function submitSpot() {
                 {{ formatSotaId(getSotaIdForSpot(spot.wotaid)!) }}
               </van-tag>
               <van-tag type="default" size="medium">{{ spot.freqmode }}</van-tag>
+            </div>
+            <div class="spot-summit-name">
+              {{ getSummitName(spot.wotaid) }}
             </div>
             <div class="spot-comment" v-if="spot.comment">
               {{ spot.comment }}
@@ -803,6 +811,14 @@ async function submitSpot() {
   flex-wrap: wrap;
   margin-top: 0.25em;
   margin-bottom: 0.25em;
+}
+
+.spot-summit-name {
+  font-size: 1em;
+  color: #323233;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  font-style: bold;
 }
 
 .spot-comment {
