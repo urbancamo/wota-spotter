@@ -19,12 +19,14 @@ const loading = ref(false)
 const spotsLimit = ref(5)
 const showForm = ref(false)
 const gpsLoading = ref(false)
+const zoomScale = ref(1.0)
 
 // Form data
 const formData = ref({
   summit: null as Summit | null,
   call: '',
-  freqmode: '',
+  freq: '',
+  mode: '',
   comment: '',
   spotter: ''
 })
@@ -33,6 +35,61 @@ const formData = ref({
 const summits = ref<Summit[]>([])
 const summitSearchValue = ref('')
 const showSummitPicker = ref(false)
+
+// Mode picker
+const showModePicker = ref(false)
+const modes = [
+  'FM',
+  'SSB',
+  'CW',
+  'AM',
+  'FT8',
+  'FT4',
+  'RTTY',
+  'PSK31',
+  'SSTV',
+  'Other'
+]
+
+// Amateur radio bandplan for automatic mode selection
+interface BandPlan {
+  lower: number  // MHz
+  upper: number  // MHz
+  mode: string
+  name: string
+}
+
+const bandplan: BandPlan[] = [
+  // HF Bands - primarily SSB
+  { lower: 1.8, upper: 2.0, mode: 'SSB', name: '160m' },
+  { lower: 3.5, upper: 4.0, mode: 'SSB', name: '80m' },
+  { lower: 5.25, upper: 5.45, mode: 'SSB', name: '60m' },
+  { lower: 7.0, upper: 7.3, mode: 'SSB', name: '40m' },
+  { lower: 10.1, upper: 10.15, mode: 'CW', name: '30m' },
+  { lower: 14.0, upper: 14.35, mode: 'SSB', name: '20m' },
+  { lower: 18.068, upper: 18.168, mode: 'SSB', name: '17m' },
+  { lower: 21.0, upper: 21.45, mode: 'SSB', name: '15m' },
+  { lower: 24.89, upper: 24.99, mode: 'SSB', name: '12m' },
+  { lower: 28.0, upper: 29.7, mode: 'SSB', name: '10m' },
+  // VHF/UHF Bands - primarily FM
+  { lower: 50, upper: 54, mode: 'FM', name: '6m' },
+  { lower: 144, upper: 144.100, mode: 'CW', name: '2m-CW' },
+  { lower: 144.100, upper: 145, mode: 'SSB', name: '2m-SSB' },
+  { lower: 145, upper: 148, mode: 'FM', name: '2m' },
+  { lower: 432, upper: 432.2, mode: 'CW', name: '70cm-CW' },
+  { lower: 432.2, upper: 433, mode: 'SSB', name: '70cm-SSB' },
+  { lower: 433, upper: 440, mode: 'FM', name: '70cm-FM' },
+  { lower: 1240, upper: 1300, mode: 'FM', name: '23cm' }
+]
+
+// Auto-select mode based on frequency
+function autoSelectMode(freqMHz: number) {
+  const band = bandplan.find(b => freqMHz >= b.lower && freqMHz <= b.upper)
+  if (band) {
+    // Auto-update mode whenever frequency changes
+    formData.value.mode = band.mode
+  }
+}
 
 // Load form data from localStorage
 function loadFormData() {
@@ -55,6 +112,38 @@ function saveFormData() {
   localStorage.setItem('wota-spot-form', JSON.stringify(formData.value))
 }
 
+// Load zoom scale from localStorage
+function loadZoomScale() {
+  const saved = localStorage.getItem('wota-zoom-scale')
+  if (saved) {
+    try {
+      const scale = parseFloat(saved)
+      if (!isNaN(scale) && scale > 0) {
+        zoomScale.value = scale
+      }
+    } catch (error) {
+      console.error('Error loading zoom scale:', error)
+    }
+  }
+}
+
+// Save zoom scale to localStorage
+function saveZoomScale() {
+  localStorage.setItem('wota-zoom-scale', zoomScale.value.toString())
+}
+
+// Zoom in by 10%
+function zoomIn() {
+  zoomScale.value = Math.min(zoomScale.value * 1.1, 3.0) // Cap at 300%
+  saveZoomScale()
+}
+
+// Zoom out by 10%
+function zoomOut() {
+  zoomScale.value = Math.max(zoomScale.value / 1.1, 0.5) // Min at 50%
+  saveZoomScale()
+}
+
 // Auto-refresh interval and countdown
 let refreshInterval: number | null = null
 let countdownInterval: number | null = null
@@ -67,7 +156,7 @@ function resetRefreshTimer() {
 // Watch for preselected summit from parent (with immediate to handle mount-time values)
 watch(() => props.preselectedSummit, (summit) => {
   if (summit) {
-    // First load any saved form data from localStorage (callsign, freqmode, spotter, etc.)
+    // First load any saved form data from localStorage (callsign, freq, mode, spotter, etc.)
     loadFormData()
     // Then override just the summit field with the preselected one
     formData.value.summit = summit
@@ -82,6 +171,7 @@ watch(() => props.preselectedSummit, (summit) => {
 // Load spots and summits on mount
 onMounted(async () => {
   loadFormData()
+  loadZoomScale()
   await loadSpots()
   await loadSummits()
 
@@ -203,6 +293,29 @@ function onSummitSelect(summit: Summit) {
   saveFormData()
 }
 
+function onModeSelect(mode: string) {
+  formData.value.mode = mode
+  showModePicker.value = false
+  saveFormData()
+}
+
+function onCallsignInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  formData.value.call = target.value.toUpperCase()
+}
+
+function onSpotterInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  formData.value.spotter = target.value.toUpperCase()
+}
+
+function onFrequencyInput() {
+  const freq = parseFloat(formData.value.freq)
+  if (!isNaN(freq) && freq > 0) {
+    autoSelectMode(freq)
+  }
+}
+
 async function useGpsLocation() {
   gpsLoading.value = true
   showLoadingToast({
@@ -300,8 +413,12 @@ async function submitSpot() {
     showToast({ message: 'Please enter a callsign', type: 'fail' })
     return
   }
-  if (!formData.value.freqmode) {
-    showToast({ message: 'Please enter frequency/mode', type: 'fail' })
+  if (!formData.value.freq) {
+    showToast({ message: 'Please enter frequency', type: 'fail' })
+    return
+  }
+  if (!formData.value.mode) {
+    showToast({ message: 'Please select mode', type: 'fail' })
     return
   }
   if (!formData.value.spotter) {
@@ -315,10 +432,13 @@ async function submitSpot() {
   })
 
   try {
+    // Combine frequency and mode for API
+    const freqmode = `${formData.value.freq}-${formData.value.mode}`
+
     await apiClient.spots.create({
       call: formData.value.call,
       wotaid: formData.value.summit.wotaid,
-      freqmode: formData.value.freqmode,
+      freqmode: freqmode,
       comment: formData.value.comment,
       spotter: formData.value.spotter
     })
@@ -346,7 +466,11 @@ async function submitSpot() {
 </script>
 
 <template>
-  <div class="spots-page">
+  <div class="spots-page" :style="{
+    transform: `scale(${zoomScale})`,
+    transformOrigin: 'top left',
+    width: `${100 / zoomScale}%`
+  }">
     <!-- Navigation Bar -->
     <van-nav-bar fixed placeholder>
       <template #title>
@@ -359,8 +483,10 @@ async function submitSpot() {
       </template>
       <template #right>
         <div class="nav-actions">
+          <van-icon name="arrow-down" size="16" @click="zoomOut" class="zoom-icon" />
+          <van-icon name="arrow-up" size="16" @click="zoomIn" class="zoom-icon" />
           <van-icon name="replay" size="16" @click="refreshNow" class="refresh-icon" />
-          <van-icon name="plus" size="18" @click="openForm" />
+          <van-icon name="plus" size="18" @click="openForm" class="add-icon" />
         </div>
       </template>
     </van-nav-bar>
@@ -466,18 +592,33 @@ async function submitSpot() {
             name="call"
             label="Callsign"
             placeholder="e.g., M0ABC/P"
+            @input="onCallsignInput"
             @blur="saveFormData"
             :rules="[{ required: true, message: 'Please enter callsign' }]"
           />
 
-          <!-- Frequency/Mode Field -->
+          <!-- Frequency Field -->
           <van-field
-            v-model="formData.freqmode"
-            name="freqmode"
-            label="Freq/Mode"
-            placeholder="e.g., 145.375-FM"
+            v-model="formData.freq"
+            name="freq"
+            type="number"
+            label="Frequency"
+            placeholder="e.g., 145.375"
+            @input="onFrequencyInput"
             @blur="saveFormData"
-            :rules="[{ required: true, message: 'Please enter frequency/mode' }]"
+            :rules="[{ required: true, message: 'Please enter frequency' }]"
+          />
+
+          <!-- Mode Field -->
+          <van-field
+            v-model="formData.mode"
+            name="mode"
+            label="Mode"
+            placeholder="Select mode"
+            readonly
+            clickable
+            @click="showModePicker = true"
+            :rules="[{ required: true, message: 'Please select mode' }]"
           />
 
           <!-- Comment Field -->
@@ -497,6 +638,7 @@ async function submitSpot() {
             name="spotter"
             label="Your Call"
             placeholder="e.g., M0XYZ"
+            @input="onSpotterInput"
             @blur="saveFormData"
             :rules="[{ required: true, message: 'Please enter your callsign' }]"
           />
@@ -543,6 +685,27 @@ async function submitSpot() {
         </van-list>
       </div>
     </van-popup>
+
+    <!-- Mode Picker Popup -->
+    <van-popup v-model:show="showModePicker" position="bottom" :style="{ height: '60%' }">
+      <div class="picker-container">
+        <van-nav-bar
+          title="Select Mode"
+          left-text="Cancel"
+          @click-left="showModePicker = false"
+        />
+
+        <van-list>
+          <van-cell
+            v-for="mode in modes"
+            :key="mode"
+            :title="mode"
+            clickable
+            @click="onModeSelect(mode)"
+          />
+        </van-list>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -577,11 +740,13 @@ async function submitSpot() {
   gap: 0.75em;
 }
 
+.zoom-icon,
 .refresh-icon {
   cursor: pointer;
   transition: opacity 0.2s;
 }
 
+.zoom-icon:active,
 .refresh-icon:active {
   opacity: 0.6;
 }

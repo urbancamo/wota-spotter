@@ -13,9 +13,43 @@ const summits = ref<Summit[]>([])
 const searchValue = ref('')
 const loading = ref(false)
 const activeTab = ref(0)
+const zoomScale = ref(1.0)
+
+// Load zoom scale from localStorage
+function loadZoomScale() {
+  const saved = localStorage.getItem('wota-zoom-scale')
+  if (saved) {
+    try {
+      const scale = parseFloat(saved)
+      if (!isNaN(scale) && scale > 0) {
+        zoomScale.value = scale
+      }
+    } catch (error) {
+      console.error('Error loading zoom scale:', error)
+    }
+  }
+}
+
+// Save zoom scale to localStorage
+function saveZoomScale() {
+  localStorage.setItem('wota-zoom-scale', zoomScale.value.toString())
+}
+
+// Zoom in by 10%
+function zoomIn() {
+  zoomScale.value = Math.min(zoomScale.value * 1.1, 3.0) // Cap at 300%
+  saveZoomScale()
+}
+
+// Zoom out by 10%
+function zoomOut() {
+  zoomScale.value = Math.max(zoomScale.value / 1.1, 0.5) // Min at 50%
+  saveZoomScale()
+}
 
 // Load summits on mount
 onMounted(async () => {
+  loadZoomScale()
   await loadSummits()
 })
 
@@ -170,11 +204,19 @@ function onSummitClick(summit: Summit) {
 </script>
 
 <template>
-  <div class="summits-page">
+  <div class="summits-page" :style="{
+    transform: `scale(${zoomScale})`,
+    transformOrigin: 'top left',
+    width: `${100 / zoomScale}%`
+  }">
     <!-- Navigation Bar -->
     <van-nav-bar title="WOTA Summits" fixed placeholder>
       <template #right>
-        <van-icon name="setting-o" size="18" />
+        <div class="nav-actions">
+          <van-icon name="arrow-down" size="16" @click="zoomOut" class="zoom-icon" />
+          <van-icon name="arrow-up" size="16" @click="zoomIn" class="zoom-icon" />
+          <van-icon name="setting-o" size="18" />
+        </div>
       </template>
     </van-nav-bar>
 
@@ -274,6 +316,21 @@ function onSummitClick(summit: Summit) {
   min-height: 100vh;
   background-color: #f7f8fa;
   padding-bottom: 3.125em; /* Space for bottom navigation */
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+}
+
+.zoom-icon {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.zoom-icon:active {
+  opacity: 0.6;
 }
 
 .results-info {
