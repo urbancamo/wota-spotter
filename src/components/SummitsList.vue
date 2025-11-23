@@ -213,9 +213,9 @@ function onSummitClick(summit: Summit) {
     <van-nav-bar title="WOTA Summits" fixed placeholder>
       <template #right>
         <div class="nav-actions">
-          <van-icon name="arrow-down" size="16" @click="zoomOut" class="zoom-icon" />
-          <van-icon name="arrow-up" size="16" @click="zoomIn" class="zoom-icon" />
-          <van-icon name="setting-o" size="18" />
+          <van-icon name="minus" size="16" @click="zoomOut" class="zoom-icon" />
+          <van-icon name="plus" size="16" @click="zoomIn" class="zoom-icon" />
+          <!--<van-icon name="setting-o" size="18" />-->
         </div>
       </template>
     </van-nav-bar>

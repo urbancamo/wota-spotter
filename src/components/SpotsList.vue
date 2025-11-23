@@ -158,6 +158,13 @@ watch(() => props.preselectedSummit, (summit) => {
   if (summit) {
     // First load any saved form data from localStorage (callsign, freq, mode, spotter, etc.)
     loadFormData()
+    // Set defaults if freq and mode are not set
+    if (!formData.value.freq) {
+      formData.value.freq = '145.500'
+    }
+    if (!formData.value.mode) {
+      formData.value.mode = 'FM'
+    }
     // Then override just the summit field with the preselected one
     formData.value.summit = summit
     // Don't save to localStorage yet - let the user submit the form first
@@ -215,7 +222,15 @@ async function loadSpots(silent = false) {
 
   try {
     const recentSpots = await apiClient.spots.getRecent(spotsLimit.value)
-    spots.value = recentSpots
+
+    // Filter spots to only show those since midnight today
+    const midnight = new Date()
+    midnight.setHours(0, 0, 0, 0)
+
+    spots.value = recentSpots.filter(spot => {
+      const spotDate = new Date(spot.datetime)
+      return spotDate >= midnight
+    })
 
     if (!silent) {
       showToast({
@@ -234,6 +249,14 @@ async function loadSpots(silent = false) {
   } finally {
     loading.value = false
   }
+}
+
+// Check if a spot is within the last hour
+function isSpotRecent(datetime: string): boolean {
+  const spotDate = new Date(datetime)
+  const now = new Date()
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+  return spotDate >= oneHourAgo
 }
 
 async function loadSummits() {
@@ -400,6 +423,13 @@ function getSotaIdForSpot(wotaid: number): number | null {
 }
 
 function openForm() {
+  // Set defaults if freq and mode are not set
+  if (!formData.value.freq) {
+    formData.value.freq = '145.500'
+  }
+  if (!formData.value.mode) {
+    formData.value.mode = 'FM'
+  }
   showForm.value = true
 }
 
@@ -454,6 +484,9 @@ async function submitSpot() {
 
     // Close form
     showForm.value = false
+
+    // Scroll to top to show the new spot
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (error) {
     closeToast()
     showToast({
@@ -483,10 +516,10 @@ async function submitSpot() {
       </template>
       <template #right>
         <div class="nav-actions">
-          <van-icon name="arrow-down" size="16" @click="zoomOut" class="zoom-icon" />
-          <van-icon name="arrow-up" size="16" @click="zoomIn" class="zoom-icon" />
+          <van-icon name="minus" size="16" @click="zoomOut" class="zoom-icon" />
+          <van-icon name="plus" size="16" @click="zoomIn" class="zoom-icon" />
           <van-icon name="replay" size="16" @click="refreshNow" class="refresh-icon" />
-          <van-icon name="plus" size="18" @click="openForm" class="add-icon" />
+          <van-icon name="add-o" size="18" @click="openForm" class="add-icon" />
         </div>
       </template>
     </van-nav-bar>
@@ -498,6 +531,7 @@ async function submitSpot() {
           v-for="spot in spots"
           :key="spot.id"
           clickable
+          :class="{ 'recent-spot': isSpotRecent(spot.datetime) }"
         >
           <template #title>
             <div class="spot-title">
@@ -627,8 +661,6 @@ async function submitSpot() {
             name="comment"
             label="Comment"
             placeholder="Optional comment"
-            type="textarea"
-            rows="2"
             @blur="saveFormData"
           />
 
@@ -807,6 +839,10 @@ async function submitSpot() {
 
 .clickable-tag:active {
   opacity: 0.7;
+}
+
+.recent-spot {
+  background-color: #d4edda !important; /* Pastel green background */
 }
 
 .form-container,
