@@ -2,16 +2,41 @@
 import { ref } from 'vue'
 import SummitsList from './components/SummitsList.vue'
 import SpotsList from './components/SpotsList.vue'
+import type { Summit } from './services/api'
 
 const activePage = ref(0) // Default to Spots page
+const preselectedSummit = ref<Summit | null>(null)
+const spotListKey = ref(0)
+
+function onCreateSpotForSummit(summit: Summit) {
+  // Set the preselected summit
+  preselectedSummit.value = summit
+  // Increment key to force SpotsList to recreate and pick up the new summit
+  spotListKey.value++
+  // Switch to Spots page
+  activePage.value = 0
+}
+
+function onSpotFormOpened() {
+  // Clear the preselected summit after it's been used
+  preselectedSummit.value = null
+}
 </script>
 
 <template>
   <div class="app-container">
     <!-- Page Content -->
     <div class="page-content">
-      <SpotsList v-if="activePage === 0" />
-      <SummitsList v-if="activePage === 1" />
+      <SpotsList
+        v-if="activePage === 0"
+        :key="spotListKey"
+        :preselected-summit="preselectedSummit"
+        @spot-form-opened="onSpotFormOpened"
+      />
+      <SummitsList
+        v-if="activePage === 1"
+        @create-spot="onCreateSpotForSummit"
+      />
     </div>
 
     <!-- Bottom Navigation -->

@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { showToast, showLoadingToast, closeToast } from 'vant'
+import { showToast } from 'vant'
 import { apiClient, type Summit } from '../services/api'
 import { formatSotaId, formatWotaId, formatHeight, formatDate } from '../utils/formatters'
 import { gridRefToLatLon } from '../utils/gridReference'
+
+const emit = defineEmits<{
+  'create-spot': [summit: Summit]
+}>()
 
 const summits = ref<Summit[]>([])
 const searchValue = ref('')
@@ -17,10 +21,6 @@ onMounted(async () => {
 
 async function loadSummits() {
   loading.value = true
-  showLoadingToast({
-    message: 'Loading...',
-    forbidClick: true,
-  })
 
   try {
     const allSummits = await apiClient.summits.getAll()
@@ -36,13 +36,11 @@ async function loadSummits() {
           lon: coords?.lon
         }
       })
-    closeToast()
     showToast({
       message: `Loaded ${summits.value.length} summits`,
       duration: 1500,
     })
   } catch (error) {
-    closeToast()
     showToast({
       message: 'Failed to load summits',
       type: 'fail',
@@ -164,6 +162,11 @@ function onGridRefClick(event: Event, gridRef: string) {
     })
   }
 }
+
+function onSummitClick(summit: Summit) {
+  // Emit event to create a spot for this summit
+  emit('create-spot', summit)
+}
 </script>
 
 <template>
@@ -211,6 +214,7 @@ function onGridRefClick(event: Event, gridRef: string) {
           :title="summit.name"
           is-link
           clickable
+          @click="onSummitClick(summit)"
         >
           <template #label>
             <div class="summit-details">
@@ -269,25 +273,25 @@ function onGridRefClick(event: Event, gridRef: string) {
 .summits-page {
   min-height: 100vh;
   background-color: #f7f8fa;
-  padding-bottom: 50px; /* Space for bottom navigation */
+  padding-bottom: 3.125em; /* Space for bottom navigation */
 }
 
 .results-info {
-  margin-bottom: 8px;
+  margin-bottom: 0.5em;
 }
 
 .summit-details {
   display: flex;
-  gap: 4px;
+  gap: 0.25em;
   flex-wrap: wrap;
-  margin-top: 4px;
-  margin-bottom: 4px;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
 }
 
 .summit-meta {
-  font-size: 12px;
+  font-size: 0.75em;
   color: #969799;
-  margin-top: 4px;
+  margin-top: 0.25em;
 }
 
 .clickable-tag {

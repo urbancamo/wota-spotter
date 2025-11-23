@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { showToast, showLoadingToast, closeToast, showSuccessToast } from 'vant'
 import { apiClient, type Spot, type Summit } from '../services/api'
 import { formatWotaId, formatSotaId, formatDateTime } from '../utils/formatters'
 import { gridRefToLatLon } from '../utils/gridReference'
 import { getCurrentPosition, findClosestSummit } from '../utils/geolocation'
+
+const props = defineProps<{
+  preselectedSummit: Summit | null
+}>()
+
+const emit = defineEmits<{
+  'spot-form-opened': []
+}>()
 
 const spots = ref<Spot[]>([])
 const loading = ref(false)
@@ -56,6 +64,21 @@ function resetRefreshTimer() {
   secondsUntilRefresh.value = 60
 }
 
+// Watch for preselected summit from parent (with immediate to handle mount-time values)
+watch(() => props.preselectedSummit, (summit) => {
+  if (summit) {
+    // First load any saved form data from localStorage (callsign, freqmode, spotter, etc.)
+    loadFormData()
+    // Then override just the summit field with the preselected one
+    formData.value.summit = summit
+    // Don't save to localStorage yet - let the user submit the form first
+    // Open the form
+    showForm.value = true
+    // Notify parent that we've handled the preselection
+    emit('spot-form-opened')
+  }
+}, { immediate: true })
+
 // Load spots and summits on mount
 onMounted(async () => {
   loadFormData()
@@ -100,19 +123,11 @@ async function refreshNow() {
 async function loadSpots(silent = false) {
   loading.value = true
 
-  if (!silent) {
-    showLoadingToast({
-      message: 'Loading...',
-      forbidClick: true,
-    })
-  }
-
   try {
     const recentSpots = await apiClient.spots.getRecent(spotsLimit.value)
     spots.value = recentSpots
 
     if (!silent) {
-      closeToast()
       showToast({
         message: `Loaded ${spots.value.length} spot(s)`,
         duration: 1500,
@@ -120,7 +135,6 @@ async function loadSpots(silent = false) {
     }
   } catch (error) {
     if (!silent) {
-      closeToast()
       showToast({
         message: 'Failed to load spots',
         type: 'fail',
@@ -536,23 +550,23 @@ async function submitSpot() {
 .spots-page {
   min-height: 100vh;
   background-color: #f7f8fa;
-  padding-bottom: 50px;
+  padding-bottom: 3.125em;
 }
 
 .title-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 0.125em;
 }
 
 .title-main {
-  font-size: 16px;
+  font-size: 1em;
   font-weight: 600;
 }
 
 .title-countdown {
-  font-size: 11px;
+  font-size: 0.6875em;
   color: #969799;
   font-weight: normal;
 }
@@ -560,7 +574,7 @@ async function submitSpot() {
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75em;
 }
 
 .refresh-icon {
@@ -576,36 +590,36 @@ async function submitSpot() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 0.5em;
   font-weight: 500;
 }
 
 .spot-time {
-  font-size: 12px;
+  font-size: 0.75em;
   color: #969799;
   font-weight: normal;
 }
 
 .spot-details {
   display: flex;
-  gap: 4px;
+  gap: 0.25em;
   flex-wrap: wrap;
-  margin-top: 4px;
-  margin-bottom: 4px;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
 }
 
 .spot-comment {
-  font-size: 13px;
+  font-size: 0.8125em;
   color: #323233;
-  margin-top: 4px;
-  margin-bottom: 4px;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
   font-style: italic;
 }
 
 .spot-spotter {
-  font-size: 12px;
+  font-size: 0.75em;
   color: #969799;
-  margin-top: 4px;
+  margin-top: 0.25em;
 }
 
 .callsign-link,
@@ -640,15 +654,15 @@ async function submitSpot() {
 
 .summit-details {
   display: flex;
-  gap: 4px;
-  margin-top: 4px;
+  gap: 0.25em;
+  margin-top: 0.25em;
 }
 
 .gps-icon {
   color: #1989fa;
   cursor: pointer;
   transition: opacity 0.2s;
-  padding: 4px;
+  padding: 0.25em;
 }
 
 .gps-icon:active {

@@ -15,6 +15,11 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  /* Scale up base font size by 20% (10pt -> 12pt equivalent) */
+  font-size: 120%;
+}
+
 html, body {
   margin: 0;
   padding: 0;
