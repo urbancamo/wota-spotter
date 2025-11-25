@@ -39,3 +39,16 @@ model Summit {
 
   @@map("summits")
 }
+
+model Alert {
+  id       Int      @id
+  datetime DateTime @db.DateTime(0)
+  call     String   @db.VarChar(12)
+  wotaid   Int      @db.UnsignedMediumInt
+  freqmode String   @db.VarChar(40)
+  comment  String?  @db.VarChar(80)
+  postedby String   @db.Char(11)
+
+  @@index([datetime])
+  @@map("alerts")
+}

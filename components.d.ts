@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AlertsList: typeof import('./src/components/AlertsList.vue')['default']
     SpotsList: typeof import('./src/components/SpotsList.vue')['default']
     SummitsList: typeof import('./src/components/SummitsList.vue')['default']
     VanCell: typeof import('vant/es')['Cell']

@@ -251,12 +251,12 @@ async function loadSpots(silent = false) {
   }
 }
 
-// Check if a spot is within the last hour
+// Check if a spot is within the last 30 minutes
 function isSpotRecent(datetime: string): boolean {
   const spotDate = new Date(datetime)
   const now = new Date()
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
-  return spotDate >= oneHourAgo
+  const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000)
+  return spotDate >= thirtyMinutesAgo
 }
 
 async function loadSummits() {
@@ -295,17 +295,10 @@ const filteredSummits = computed(() => {
   ).slice(0, 50) // Limit to 50 results
 })
 
-// Format summit for display in picker
-function formatSummitDisplay(summit: Summit): string {
-  const wotaId = formatWotaId(summit.wotaid)
-  const sotaId = summit.sotaid ? formatSotaId(summit.sotaid) : ''
-  return `${summit.name} (${wotaId}${sotaId ? ' / ' + sotaId : ''})`
-}
-
-// Get selected summit display text
+// Get selected summit display text (name only)
 const selectedSummitText = computed(() => {
   if (formData.value.summit) {
-    return formatSummitDisplay(formData.value.summit)
+    return formData.value.summit.name
   }
   return ''
 })
@@ -530,7 +523,7 @@ async function submitSpot() {
     </van-nav-bar>
 
     <!-- Spots List -->
-    <van-pull-refresh v-model="loading" @refresh="loadSpots">
+    <van-pull-refresh v-model="loading" @refresh="refreshNow" loading-text="Loading spots...">
       <van-list>
         <van-cell
           v-for="spot in spots"
@@ -628,6 +621,20 @@ async function submitSpot() {
             </template>
           </van-field>
 
+          <!-- Summit References Field -->
+          <van-cell v-if="formData.summit" title="References" style="color: darkgray">
+            <template #value>
+              <div class="summit-references">
+                <van-tag type="primary" size="medium">
+                  {{ formatWotaId(formData.summit.wotaid) }}
+                </van-tag>
+                <van-tag v-if="formData.summit.sotaid" type="success" size="medium">
+                  {{ formatSotaId(formData.summit.sotaid) }}
+                </van-tag>
+              </div>
+            </template>
+          </van-cell>
+
           <!-- Callsign Field -->
           <van-field
             v-model="formData.call"
@@ -646,6 +653,7 @@ async function submitSpot() {
             type="number"
             label="Frequency"
             placeholder="e.g., 145.375"
+            @focus="formData.freq = ''"
             @input="onFrequencyInput"
             @blur="saveFormData"
             :rules="[{ required: true, message: 'Please enter frequency' }]"
@@ -818,7 +826,7 @@ async function submitSpot() {
   color: #323233;
   margin-top: 0.25em;
   margin-bottom: 0.25em;
-  font-style: bold;
+  font-weight: bold;
 }
 
 .spot-comment {
@@ -873,6 +881,12 @@ async function submitSpot() {
   display: flex;
   gap: 0.25em;
   margin-top: 0.25em;
+}
+
+.summit-references {
+  display: flex;
+  gap: 0.25em;
+  align-items: center;
 }
 
 .gps-icon {

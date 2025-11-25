@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import SummitsList from './components/SummitsList.vue'
 import SpotsList from './components/SpotsList.vue'
+import AlertsList from './components/AlertsList.vue'
 import type { Summit } from './services/api'
 
 const activePage = ref(0) // Default to Spots page
@@ -33,8 +34,11 @@ function onSpotFormOpened() {
         :preselected-summit="preselectedSummit"
         @spot-form-opened="onSpotFormOpened"
       />
-      <SummitsList
+      <AlertsList
         v-if="activePage === 1"
+      />
+      <SummitsList
+        v-if="activePage === 2"
         @create-spot="onCreateSpotForSummit"
       />
     </div>
@@ -43,6 +47,9 @@ function onSpotFormOpened() {
     <van-tabbar v-model="activePage" fixed placeholder>
       <van-tabbar-item icon="chat-o">
         Spots
+      </van-tabbar-item>
+      <van-tabbar-item icon="warning-o">
+        Alerts
       </van-tabbar-item>
       <van-tabbar-item icon="location-o">
         Summits

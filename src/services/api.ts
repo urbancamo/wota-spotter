@@ -28,6 +28,16 @@ interface Spot {
   spotter: string
 }
 
+interface Alert {
+  id: number
+  datetime: Date
+  call: string
+  wotaid: number
+  freqmode: string
+  comment: string | null
+  postedby: string
+}
+
 export const apiClient = {
   // Summits API
   summits: {
@@ -141,6 +151,64 @@ export const apiClient = {
     },
   },
 
+  // Alerts API
+  alerts: {
+    async getAll(): Promise<Alert[]> {
+      const response = await fetch(`${API_BASE}/alerts`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch alerts')
+      }
+      return response.json()
+    },
+
+    async getRecent(limit: number = 10): Promise<Alert[]> {
+      const response = await fetch(`${API_BASE}/alerts/recent?limit=${limit}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch recent alerts')
+      }
+      return response.json()
+    },
+
+    async getById(id: number): Promise<Alert | null> {
+      const response = await fetch(`${API_BASE}/alerts/${id}`)
+      if (response.status === 404) {
+        return null
+      }
+      if (!response.ok) {
+        throw new Error('Failed to fetch alert')
+      }
+      return response.json()
+    },
+
+    async searchByCall(call: string): Promise<Alert[]> {
+      const response = await fetch(`${API_BASE}/alerts/search?call=${encodeURIComponent(call)}`)
+      if (!response.ok) {
+        throw new Error('Failed to search alerts')
+      }
+      return response.json()
+    },
+
+    async create(data: {
+      call: string
+      wotaid: number
+      freqmode: string
+      comment: string
+      postedby: string
+    }): Promise<Alert> {
+      const response = await fetch(`${API_BASE}/alerts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) {
+        throw new Error('Failed to create alert')
+      }
+      return response.json()
+    },
+  },
+
   // Health check
   async healthCheck(): Promise<{ status: string }> {
     const response = await fetch(`${API_BASE}/health`)
@@ -151,4 +219,4 @@ export const apiClient = {
   },
 }
 
-export type { Summit, Spot }
+export type { Summit, Spot, Alert }

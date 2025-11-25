@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { summitsService, spotsService } from '../src/services/database.js'
+import { summitsService, spotsService, alertsService } from '../src/services/database.js'
 
 const app = express()
 const port = 3001
@@ -160,6 +160,82 @@ app.post('/api/spots', async (req, res) => {
   } catch (error) {
     console.error('Error creating spot:', error)
     res.status(500).json({ error: 'Failed to create spot' })
+  }
+})
+
+// Alerts endpoints
+app.get('/api/alerts', async (req, res) => {
+  try {
+    const alerts = await alertsService.getAllAlerts()
+    res.json(alerts)
+  } catch (error) {
+    console.error('Error fetching alerts:', error)
+    res.status(500).json({ error: 'Failed to fetch alerts' })
+  }
+})
+
+app.get('/api/alerts/recent', async (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10
+    const alerts = await alertsService.getRecentAlerts(limit)
+    res.json(alerts)
+  } catch (error) {
+    console.error('Error fetching recent alerts:', error)
+    res.status(500).json({ error: 'Failed to fetch recent alerts' })
+  }
+})
+
+app.get('/api/alerts/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    const alert = await alertsService.getAlertById(id)
+    if (alert) {
+      res.json(alert)
+    } else {
+      res.status(404).json({ error: 'Alert not found' })
+    }
+  } catch (error) {
+    console.error('Error fetching alert:', error)
+    res.status(500).json({ error: 'Failed to fetch alert' })
+  }
+})
+
+app.get('/api/alerts/search', async (req, res) => {
+  try {
+    const { call } = req.query
+    if (!call || typeof call !== 'string') {
+      return res.status(400).json({ error: 'Call parameter is required' })
+    }
+    const alerts = await alertsService.searchByCall(call)
+    res.json(alerts)
+  } catch (error) {
+    console.error('Error searching alerts:', error)
+    res.status(500).json({ error: 'Failed to search alerts' })
+  }
+})
+
+app.post('/api/alerts', async (req, res) => {
+  try {
+    const { call, wotaid, freqmode, comment, postedby } = req.body
+
+    // Validate required fields
+    if (!call || !wotaid || !freqmode || !postedby) {
+      return res.status(400).json({ error: 'Missing required fields: call, wotaid, freqmode, postedby' })
+    }
+
+    const alert = await alertsService.createAlert({
+      datetime: new Date(),
+      call,
+      wotaid: parseInt(wotaid),
+      freqmode,
+      comment: comment || null,
+      postedby
+    })
+
+    res.status(201).json(alert)
+  } catch (error) {
+    console.error('Error creating alert:', error)
+    res.status(500).json({ error: 'Failed to create alert' })
   }
 })
 

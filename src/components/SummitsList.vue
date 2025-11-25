@@ -237,9 +237,8 @@ function onSummitClick(summit: Summit) {
     </van-tabs>
 
     <!-- Results count -->
-    <div class="results-info">
+    <div class="results-info" v-if="searchValue">
       <van-notice-bar
-        v-if="searchValue"
         :text="`Found ${currentList.length} summit(s)`"
         left-icon="search"
         background="#ecf9ff"
@@ -248,7 +247,7 @@ function onSummitClick(summit: Summit) {
     </div>
 
     <!-- Summits List -->
-    <van-pull-refresh v-model="loading" @refresh="loadSummits">
+    <van-pull-refresh v-model="loading" @refresh="loadSummits" loading-text="Loading summits...">
       <van-list>
         <van-cell
           v-for="summit in currentList"

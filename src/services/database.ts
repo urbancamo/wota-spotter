@@ -10,6 +10,125 @@ export function getPrismaClient(): PrismaClient {
   return prisma
 }
 
+// Alerts service functions
+export const alertsService = {
+  // Get all alerts
+  async getAllAlerts() {
+    const client = getPrismaClient()
+    // Use raw query to filter out invalid MySQL dates (like '0000-00-00')
+    const alerts = await client.$queryRaw`
+      SELECT * FROM alerts
+      WHERE datetime > '1970-01-01 00:00:00'
+      ORDER BY datetime ASC
+    ` as any[]
+    // Convert BigInt to Number for JSON serialization
+    return alerts.map(alert => ({
+      ...alert,
+      id: Number(alert.id),
+      wotaid: Number(alert.wotaid)
+    }))
+  },
+
+  // Get a specific alert by ID
+  async getAlertById(id: number) {
+    const client = getPrismaClient()
+    return await client.alert.findUnique({
+      where: { id }
+    })
+  },
+
+  // Create a new alert
+  async createAlert(data: {
+    datetime: Date
+    call: string
+    wotaid: number
+    freqmode: string
+    comment: string | null
+    postedby: string
+  }) {
+    const client = getPrismaClient()
+
+    // Get the maximum ID and add 1
+    const maxAlert = await client.alert.findFirst({
+      orderBy: {
+        id: 'desc'
+      },
+      select: {
+        id: true
+      }
+    })
+
+    const nextId = maxAlert ? maxAlert.id + 1 : 1
+
+    return await client.alert.create({
+      data: {
+        id: nextId,
+        ...data
+      }
+    })
+  },
+
+  // Update an alert
+  async updateAlert(id: number, data: {
+    datetime?: Date
+    call?: string
+    wotaid?: number
+    freqmode?: string
+    comment?: string | null
+    postedby?: string
+  }) {
+    const client = getPrismaClient()
+    return await client.alert.update({
+      where: { id },
+      data
+    })
+  },
+
+  // Delete an alert
+  async deleteAlert(id: number) {
+    const client = getPrismaClient()
+    return await client.alert.delete({
+      where: { id }
+    })
+  },
+
+  // Search alerts by call sign
+  async searchByCall(call: string) {
+    const client = getPrismaClient()
+    // Use raw query to filter out invalid MySQL dates
+    const alerts = await client.$queryRaw`
+      SELECT * FROM alerts
+      WHERE call LIKE ${`%${call}%`}
+        AND datetime > '1970-01-01 00:00:00'
+      ORDER BY datetime DESC
+    ` as any[]
+    // Convert BigInt to Number for JSON serialization
+    return alerts.map(alert => ({
+      ...alert,
+      id: Number(alert.id),
+      wotaid: Number(alert.wotaid)
+    }))
+  },
+
+  // Get recent alerts (last N alerts)
+  async getRecentAlerts(limit: number = 10) {
+    const client = getPrismaClient()
+    // Use raw query to filter out invalid MySQL dates
+    const alerts = await client.$queryRaw`
+      SELECT * FROM alerts
+      WHERE datetime > '1970-01-01 00:00:00'
+      ORDER BY datetime DESC
+      LIMIT ${limit}
+    ` as any[]
+    // Convert BigInt to Number for JSON serialization
+    return alerts.map(alert => ({
+      ...alert,
+      id: Number(alert.id),
+      wotaid: Number(alert.wotaid)
+    }))
+  }
+}
+
 // Spots service functions
 export const spotsService = {
   // Get all spots
