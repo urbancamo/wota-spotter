@@ -622,8 +622,12 @@ async function submitSpot() {
           </van-field>
 
           <!-- Summit References Field -->
-          <van-cell v-if="formData.summit" title="References" style="color: darkgray">
-            <template #value>
+          <van-field
+            v-if="formData.summit"
+            label="References"
+            readonly
+          >
+            <template #input>
               <div class="summit-references">
                 <van-tag type="primary" size="medium">
                   {{ formatWotaId(formData.summit.wotaid) }}
@@ -633,7 +637,7 @@ async function submitSpot() {
                 </van-tag>
               </div>
             </template>
-          </van-cell>
+          </van-field>
 
           <!-- Callsign Field -->
           <van-field
@@ -886,7 +890,6 @@ async function submitSpot() {
 .summit-references {
   display: flex;
   gap: 0.25em;
-  align-items: center;
 }
 
 .gps-icon {
