@@ -51,6 +51,10 @@ const modes = [
   'Other'
 ]
 
+// Callsign history for suggestions
+const callsignHistory = ref<string[]>([])
+const spotterHistory = ref<string[]>([])
+
 // Amateur radio bandplan for automatic mode selection
 interface BandPlan {
   lower: number  // MHz
@@ -144,6 +148,70 @@ function zoomOut() {
   saveZoomScale()
 }
 
+// Load callsign history from localStorage
+function loadCallsignHistory() {
+  const savedCallsigns = localStorage.getItem('wota-callsign-history')
+  const savedSpotters = localStorage.getItem('wota-spotter-history')
+
+  if (savedCallsigns) {
+    try {
+      callsignHistory.value = JSON.parse(savedCallsigns)
+    } catch (error) {
+      console.error('Error loading callsign history:', error)
+    }
+  }
+
+  if (savedSpotters) {
+    try {
+      spotterHistory.value = JSON.parse(savedSpotters)
+    } catch (error) {
+      console.error('Error loading spotter history:', error)
+    }
+  }
+}
+
+// Add callsign to history (keep last 3 unique)
+function addToCallsignHistory(callsign: string) {
+  if (!callsign) return
+
+  // Remove if already exists
+  callsignHistory.value = callsignHistory.value.filter(c => c !== callsign)
+  // Add to beginning
+  callsignHistory.value.unshift(callsign)
+  // Keep only last 3
+  callsignHistory.value = callsignHistory.value.slice(0, 3)
+
+  // Save to localStorage
+  localStorage.setItem('wota-callsign-history', JSON.stringify(callsignHistory.value))
+}
+
+// Add spotter to history (keep last 3 unique)
+function addToSpotterHistory(spotter: string) {
+  if (!spotter) return
+
+  // Remove if already exists
+  spotterHistory.value = spotterHistory.value.filter(s => s !== spotter)
+  // Add to beginning
+  spotterHistory.value.unshift(spotter)
+  // Keep only last 3
+  spotterHistory.value = spotterHistory.value.slice(0, 3)
+
+  // Save to localStorage
+  localStorage.setItem('wota-spotter-history', JSON.stringify(spotterHistory.value))
+}
+
+// Populate callsign from history
+function selectCallsignFromHistory(callsign: string) {
+  formData.value.call = callsign
+  saveFormData()
+}
+
+// Populate spotter from history
+function selectSpotterFromHistory(spotter: string) {
+  formData.value.spotter = spotter
+  saveFormData()
+}
+
 // Auto-refresh interval and countdown
 let refreshInterval: number | null = null
 let countdownInterval: number | null = null
@@ -179,6 +247,7 @@ watch(() => props.preselectedSummit, (summit) => {
 onMounted(async () => {
   loadFormData()
   loadZoomScale()
+  loadCallsignHistory()
   await loadSpots()
   await loadSummits()
 
@@ -474,6 +543,10 @@ async function submitSpot() {
     closeToast()
     showSuccessToast('Spot created successfully')
 
+    // Add callsigns to history
+    addToCallsignHistory(formData.value.call)
+    addToSpotterHistory(formData.value.spotter)
+
     // Save form data
     saveFormData()
 
@@ -589,7 +662,7 @@ async function submitSpot() {
     </van-pull-refresh>
 
     <!-- Create Spot Form Popup -->
-    <van-popup v-model:show="showForm" position="bottom" :style="{ height: '80%' }">
+    <van-popup v-model:show="showForm" position="bottom" :style="{ height: '85%' }">
       <div class="form-container">
         <van-nav-bar
           title="Create Spot"
@@ -645,10 +718,34 @@ async function submitSpot() {
             name="call"
             label="Callsign"
             placeholder="e.g., M0ABC/P"
+            @focus="formData.call = ''"
             @input="onCallsignInput"
             @blur="saveFormData"
             :rules="[{ required: true, message: 'Please enter callsign' }]"
           />
+
+          <!-- Callsign History Suggestions -->
+          <van-field
+            v-if="callsignHistory.length > 0"
+            label="History"
+            readonly
+            class="history-field"
+          >
+            <template #input>
+              <div class="history-tags">
+                <van-tag
+                  v-for="(callsign, index) in callsignHistory"
+                  :key="callsign"
+                  :type="index === 0 ? 'success' : index === 1 ? 'warning' : 'danger'"
+                  size="medium"
+                  class="history-tag"
+                  @click="selectCallsignFromHistory(callsign)"
+                >
+                  {{ callsign }}
+                </van-tag>
+              </div>
+            </template>
+          </van-field>
 
           <!-- Frequency Field -->
           <van-field
@@ -690,10 +787,34 @@ async function submitSpot() {
             name="spotter"
             label="Your Call"
             placeholder="e.g., M0XYZ"
+            @focus="formData.spotter = ''"
             @input="onSpotterInput"
             @blur="saveFormData"
             :rules="[{ required: true, message: 'Please enter your callsign' }]"
           />
+
+          <!-- Spotter History Suggestions -->
+          <van-field
+            v-if="spotterHistory.length > 0"
+            label="History"
+            readonly
+            class="history-field"
+          >
+            <template #input>
+              <div class="history-tags">
+                <van-tag
+                  v-for="(spotter, index) in spotterHistory"
+                  :key="spotter"
+                  :type="index === 0 ? 'success' : index === 1 ? 'warning' : 'danger'"
+                  size="medium"
+                  class="history-tag"
+                  @click="selectSpotterFromHistory(spotter)"
+                >
+                  {{ spotter }}
+                </van-tag>
+              </div>
+            </template>
+          </van-field>
         </van-form>
       </div>
     </van-popup>
@@ -879,6 +1000,8 @@ async function submitSpot() {
   display: flex;
   flex-direction: column;
   background-color: #f7f8fa;
+  overflow-y: auto;
+  padding-bottom: 100px;
 }
 
 .summit-details {
@@ -914,5 +1037,24 @@ async function submitSpot() {
   50% {
     opacity: 0.4;
   }
+}
+
+.history-field :deep(.van-field__label) {
+  color: #969799;
+}
+
+.history-tags {
+  display: flex;
+  gap: 0.5em;
+  flex-wrap: wrap;
+}
+
+.history-tag {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.history-tag:active {
+  opacity: 0.7;
 }
 </style>
