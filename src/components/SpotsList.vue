@@ -305,6 +305,7 @@ async function loadSpots(silent = false) {
       showToast({
         message: `Loaded ${spots.value.length} spot(s)`,
         duration: 1500,
+        className: 'loading-toast'
       })
     }
   } catch (error) {

@@ -14,7 +14,9 @@ declare module 'vue' {
     AlertsList: typeof import('./src/components/AlertsList.vue')['default']
     SpotsList: typeof import('./src/components/SpotsList.vue')['default']
     SummitsList: typeof import('./src/components/SummitsList.vue')['default']
+    VanButton: typeof import('vant/es')['Button']
     VanCell: typeof import('vant/es')['Cell']
+    VanDatePicker: typeof import('vant/es')['DatePicker']
     VanEmpty: typeof import('vant/es')['Empty']
     VanField: typeof import('vant/es')['Field']
     VanForm: typeof import('vant/es')['Form']
@@ -30,5 +32,6 @@ declare module 'vue' {
     VanTabbarItem: typeof import('vant/es')['TabbarItem']
     VanTabs: typeof import('vant/es')['Tabs']
     VanTag: typeof import('vant/es')['Tag']
+    VanTimePicker: typeof import('vant/es')['TimePicker']
   }
 }

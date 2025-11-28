@@ -194,6 +194,7 @@ export const apiClient = {
       freqmode: string
       comment: string
       postedby: string
+      datetime: Date
     }): Promise<Alert> {
       const response = await fetch(`${API_BASE}/alerts`, {
         method: 'POST',

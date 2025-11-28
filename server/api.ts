@@ -216,7 +216,7 @@ app.get('/api/alerts/search', async (req, res) => {
 
 app.post('/api/alerts', async (req, res) => {
   try {
-    const { call, wotaid, freqmode, comment, postedby } = req.body
+    const { call, wotaid, freqmode, comment, postedby, datetime } = req.body
 
     // Validate required fields
     if (!call || !wotaid || !freqmode || !postedby) {
@@ -224,7 +224,7 @@ app.post('/api/alerts', async (req, res) => {
     }
 
     const alert = await alertsService.createAlert({
-      datetime: new Date(),
+      datetime: datetime ? new Date(datetime) : new Date(),
       call,
       wotaid: parseInt(wotaid),
       freqmode,

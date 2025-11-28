@@ -72,7 +72,7 @@ echo -e "${GREEN}✓ API server started (PID: $API_PID)${NC}"
 sleep 2
 
 # Start frontend dev server
-echo -e "${BLUE}Starting frontend dev server on port 5173...${NC}"
+echo -e "${BLUE}Starting frontend dev server on port 3000...${NC}"
 npm run dev > frontend.log 2>&1 &
 FRONTEND_PID=$!
 echo $FRONTEND_PID > "$FRONTEND_PID_FILE"
@@ -80,8 +80,8 @@ echo -e "${GREEN}✓ Frontend started (PID: $FRONTEND_PID)${NC}"
 sleep 3
 
 # Start ngrok
-echo -e "${BLUE}Starting ngrok tunnel to port 5173...${NC}"
-ngrok http 5173 > ngrok.log 2>&1 &
+echo -e "${BLUE}Starting ngrok tunnel to port 3000...${NC}"
+ngrok http 3000 > ngrok.log 2>&1 &
 NGROK_PID=$!
 echo $NGROK_PID > "$NGROK_PID_FILE"
 echo -e "${GREEN}✓ ngrok started (PID: $NGROK_PID)${NC}"
@@ -90,7 +90,7 @@ sleep 2
 # Get ngrok URL
 echo -e "\n${GREEN}All services are running!${NC}\n"
 echo -e "${BLUE}Local URLs:${NC}"
-echo -e "  Frontend: http://localhost:5173"
+echo -e "  Frontend: http://localhost:3000"
 echo -e "  API:      http://localhost:3001"
 echo ""
 
