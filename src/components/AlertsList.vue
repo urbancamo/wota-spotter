@@ -690,7 +690,6 @@ async function submitAlert() {
                 placeholder="dd/mm/yyyy"
                 @blur="saveFormData"
                 class="date-input"
-                inputmode="numeric"
               />
             </template>
           </van-field>
