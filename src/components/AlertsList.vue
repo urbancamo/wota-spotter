@@ -38,6 +38,9 @@ const showTimePicker = ref(false)
 const callsignHistory = ref<string[]>([])
 const postedbyHistory = ref<string[]>([])
 
+// Track created alert IDs
+const createdAlertIds = ref<number[]>([])
+
 // Auto-refresh interval and countdown
 let refreshInterval: number | null = null
 let countdownInterval: number | null = null
@@ -79,9 +82,33 @@ function zoomOut() {
   saveZoomScale()
 }
 
+// Load created alert IDs from localStorage
+function loadCreatedAlertIds() {
+  const saved = localStorage.getItem('wota-created-alert-ids')
+  if (saved) {
+    try {
+      createdAlertIds.value = JSON.parse(saved)
+    } catch (error) {
+      console.error('Error loading created alert IDs:', error)
+      createdAlertIds.value = []
+    }
+  }
+}
+
+// Save created alert IDs to localStorage
+function saveCreatedAlertIds() {
+  localStorage.setItem('wota-created-alert-ids', JSON.stringify(createdAlertIds.value))
+}
+
+// Check if alert was created by this user
+function isMyAlert(alertId: number): boolean {
+  return createdAlertIds.value.includes(alertId)
+}
+
 // Load alerts and summits on mount
 onMounted(async () => {
   loadZoomScale()
+  loadCreatedAlertIds()
   await loadAlerts()
   await loadSummits()
 
@@ -419,12 +446,11 @@ async function useGpsLocation() {
   }
 }
 
-function getTomorrowDate() {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const year = tomorrow.getFullYear()
-  const month = String(tomorrow.getMonth() + 1).padStart(2, '0')
-  const day = String(tomorrow.getDate()).padStart(2, '0')
+function getTodayDate() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
 
@@ -445,9 +471,9 @@ function addFreqModeShortcut(shortcut: string) {
 
 function openForm() {
   loadFormData()
-  // Set default date and time to tomorrow at 10:00 UTC
+  // Set default date and time to today at 10:00 UTC
   if (!formData.value.activationDate) {
-    formData.value.activationDate = getTomorrowDate()
+    formData.value.activationDate = getTodayDate()
   }
   if (!formData.value.activationTime) {
     formData.value.activationTime = '10:00'
@@ -493,7 +519,7 @@ async function submitAlert() {
     // Combine date and time to create datetime
     const datetime = new Date(`${formData.value.activationDate}T${formData.value.activationTime}:00Z`)
 
-    await apiClient.alerts.create({
+    const createdAlert = await apiClient.alerts.create({
       call: formData.value.call,
       wotaid: formData.value.summit.wotaid,
       freqmode: formData.value.freqmode,
@@ -501,6 +527,10 @@ async function submitAlert() {
       postedby: formData.value.postedby,
       datetime
     })
+
+    // Track this alert as created by the user
+    createdAlertIds.value.push(createdAlert.id)
+    saveCreatedAlertIds()
 
     closeToast()
     showSuccessToast('Alert created successfully')
@@ -527,6 +557,36 @@ async function submitAlert() {
       type: 'fail',
     })
     console.error('Error creating alert:', error)
+  }
+}
+
+async function deleteAlert(event: Event, alertId: number) {
+  event.stopPropagation()
+
+  showLoadingToast({
+    message: 'Deleting alert...',
+    forbidClick: true,
+  })
+
+  try {
+    await apiClient.alerts.delete(alertId)
+
+    // Remove from created alerts list
+    createdAlertIds.value = createdAlertIds.value.filter(id => id !== alertId)
+    saveCreatedAlertIds()
+
+    closeToast()
+    showSuccessToast('Alert deleted')
+
+    // Reload alerts
+    await loadAlerts(true)
+  } catch (error) {
+    closeToast()
+    showToast({
+      message: 'Failed to delete alert',
+      type: 'fail',
+    })
+    console.error('Error deleting alert:', error)
   }
 }
 </script>
@@ -612,6 +672,16 @@ async function submitAlert() {
               >
                 {{ alert.postedby }}
               </span>
+              <van-button
+                v-if="isMyAlert(alert.id)"
+                type="danger"
+                size="small"
+                plain
+                @click="deleteAlert($event, alert.id)"
+                class="delete-button"
+              >
+                Delete
+              </van-button>
             </div>
           </template>
         </van-cell>
@@ -1031,9 +1101,17 @@ async function submitAlert() {
 }
 
 .alert-postedby {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
   font-size: 0.75em;
   color: #969799;
   margin-top: 0.25em;
+}
+
+.delete-button {
+  margin-left: auto;
+  font-size: 0.75em;
 }
 
 .callsign-link,
@@ -1069,7 +1147,7 @@ async function submitAlert() {
   flex-direction: column;
   background-color: #f7f8fa;
   overflow-y: auto;
-  padding-bottom: 100px;
+  padding-bottom: 200px;
 }
 
 .summit-details {

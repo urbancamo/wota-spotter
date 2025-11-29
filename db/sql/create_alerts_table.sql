@@ -8,4 +8,4 @@ CREATE TABLE `alerts` (
                           `postedby` char(11) NOT NULL,
                           PRIMARY KEY (`id`),
                           KEY `datetime` (`datetime`)
-) ENGINE=MyISAM AUTO_INCREMENT=7653 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=7653 DEFAULT CHARSET=latin1

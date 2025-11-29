@@ -5,6 +5,7 @@ import { apiClient, type Summit } from '../services/api'
 import { formatSotaId, formatWotaId, formatHeight, formatDate } from '../utils/formatters'
 import { gridRefToLatLon } from '../utils/gridReference'
 import { getCurrentPosition, formatDistance } from '../utils/geolocation'
+import { toMaidenhead } from '../utils/maidenhead'
 import LatLon from 'geodesy/latlon-spherical.js'
 
 const emit = defineEmits<{
@@ -345,6 +346,13 @@ function onSummitClick(summit: Summit) {
                 @click="onGridRefClick($event, summit.reference)"
               >
                 {{ summit.reference }}
+              </van-tag>
+              <van-tag
+                v-if="summit.lat && summit.lon"
+                type="warning"
+                size="medium"
+              >
+                {{ toMaidenhead(summit.lat, summit.lon) }}
               </van-tag>
             </div>
             <div class="summit-meta">

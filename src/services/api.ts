@@ -208,6 +208,15 @@ export const apiClient = {
       }
       return response.json()
     },
+
+    async delete(id: number): Promise<void> {
+      const response = await fetch(`${API_BASE}/alerts/${id}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        throw new Error('Failed to delete alert')
+      }
+    },
   },
 
   // Health check
