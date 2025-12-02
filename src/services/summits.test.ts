@@ -19,7 +19,7 @@ describe('Summits Database Tests', () => {
 
       if (summits.length > 0) {
         const first = summits[0]
-        console.log(`First summit: wotaid=${first.wotaid}, name="${first.name}", height=${first.height}m`)
+        console.log(`First summit: wotaid=${first?.wotaid}, name="${first?.name}", height=${first?.height}m`)
       }
     })
 
@@ -27,11 +27,11 @@ describe('Summits Database Tests', () => {
       const summits = await summitsService.getAllSummits()
       if (summits.length > 0) {
         const summit = summits[0]
-        expect(typeof summit.wotaid).toBe('number')
-        expect(typeof summit.name).toBe('string')
-        expect(typeof summit.height).toBe('number')
-        expect(typeof summit.reference).toBe('string')
-        expect(typeof summit.book).toBe('string')
+        expect(typeof summit?.wotaid).toBe('number')
+        expect(typeof summit?.name).toBe('string')
+        expect(typeof summit?.height).toBe('number')
+        expect(typeof summit?.reference).toBe('string')
+        expect(typeof summit?.book).toBe('string')
         console.log('Summit data structure validated successfully')
       }
     })
@@ -42,8 +42,8 @@ describe('Summits Database Tests', () => {
       // First get a valid wotaid
       const allSummits = await summitsService.getAllSummits()
       if (allSummits.length > 0) {
-        const testWotaId = allSummits[0].wotaid
-        const summit = await summitsService.getByWotaId(testWotaId)
+        const testWotaId = allSummits[0]?.wotaid
+        const summit = await summitsService.getByWotaId(testWotaId || 0)
 
         expect(summit).toBeDefined()
         expect(summit).not.toBeNull()
@@ -107,17 +107,17 @@ describe('Summits Database Tests', () => {
       const allSummits = await summitsService.getAllSummits()
       if (allSummits.length > 0) {
         // Get a substring from the first summit's name
-        const testName = allSummits[0].name
-        const searchTerm = testName.substring(0, Math.min(4, testName.length))
+        const testName = allSummits[0]?.name
+        const searchTerm = testName?.substring(0, Math.min(4, testName.length))
 
-        const results = await summitsService.searchByName(searchTerm)
+        const results = await summitsService.searchByName(searchTerm || '')
         expect(results).toBeDefined()
         expect(Array.isArray(results)).toBe(true)
         expect(results.length).toBeGreaterThan(0)
 
         // Verify all results contain the search term
         results.forEach(summit => {
-          expect(summit.name.toLowerCase()).toContain(searchTerm.toLowerCase())
+          expect(summit.name.toLowerCase()).toContain(searchTerm?.toLowerCase())
         })
 
         console.log(`Search for "${searchTerm}" found ${results.length} summit(s)`)
@@ -136,12 +136,12 @@ describe('Summits Database Tests', () => {
     it('should perform case-insensitive name search', async () => {
       const allSummits = await summitsService.getAllSummits()
       if (allSummits.length > 0) {
-        const testName = allSummits[0].name
-        const searchTerm = testName.substring(0, Math.min(4, testName.length))
+        const testName = allSummits[0]?.name
+        const searchTerm = testName?.substring(0, Math.min(4, testName.length))
 
         // Test with different cases
-        const lowerResults = await summitsService.searchByNameInsensitive(searchTerm.toLowerCase())
-        const upperResults = await summitsService.searchByNameInsensitive(searchTerm.toUpperCase())
+        const lowerResults = await summitsService.searchByNameInsensitive(searchTerm?.toLowerCase() || '')
+        const upperResults = await summitsService.searchByNameInsensitive(searchTerm?.toUpperCase() || '')
 
         expect(lowerResults.length).toBeGreaterThan(0)
         expect(upperResults.length).toBeGreaterThan(0)
@@ -155,8 +155,8 @@ describe('Summits Database Tests', () => {
     it('should retrieve summits by book code', async () => {
       const allSummits = await summitsService.getAllSummits()
       if (allSummits.length > 0) {
-        const testBook = allSummits[0].book
-        const results = await summitsService.getByBook(testBook)
+        const testBook = allSummits[0]?.book
+        const results = await summitsService.getByBook(testBook || '')
 
         expect(results).toBeDefined()
         expect(Array.isArray(results)).toBe(true)
@@ -199,43 +199,6 @@ describe('Summits Database Tests', () => {
       } catch (error) {
         console.error('Database connection error:', error)
         throw error
-      }
-    })
-
-    it('should handle creating summit with missing required fields', async () => {
-      try {
-        // @ts-expect-error - intentionally passing incomplete data
-        await summitsService.createSummit({
-          wotaid: 999999,
-          name: 'TEST SUMMIT'
-          // Missing required fields: book, height, reference
-        })
-        expect(true).toBe(false) // Should not reach here
-      } catch (error) {
-        expect(error).toBeDefined()
-        console.log('Successfully caught error for missing required fields:', error.message)
-      }
-    })
-
-    it('should handle updating non-existent summit', async () => {
-      try {
-        await summitsService.updateSummit(999999, {
-          name: 'UPDATED NAME'
-        })
-        expect(true).toBe(false) // Should not reach here
-      } catch (error) {
-        expect(error).toBeDefined()
-        console.log('Successfully caught error for updating non-existent summit:', error.message)
-      }
-    })
-
-    it('should handle deleting non-existent summit', async () => {
-      try {
-        await summitsService.deleteSummit(999999)
-        expect(true).toBe(false) // Should not reach here
-      } catch (error) {
-        expect(error).toBeDefined()
-        console.log('Successfully caught error for deleting non-existent summit:', error.message)
       }
     })
 

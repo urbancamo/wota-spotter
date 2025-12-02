@@ -32,7 +32,7 @@ export const alertsService = {
   // Get a specific alert by ID
   async getAlertById(id: number) {
     const client = getPrismaClient()
-    return await client.alert.findUnique({
+    return client.alert.findUnique({
       where: { id }
     })
   },
@@ -60,7 +60,7 @@ export const alertsService = {
 
     const nextId = maxAlert ? maxAlert.id + 1 : 1
 
-    return await client.alert.create({
+    return client.alert.create({
       data: {
         id: nextId,
         ...data
@@ -78,7 +78,7 @@ export const alertsService = {
     postedby?: string
   }) {
     const client = getPrismaClient()
-    return await client.alert.update({
+    return client.alert.update({
       where: { id },
       data
     })
@@ -87,9 +87,9 @@ export const alertsService = {
   // Delete an alert
   async deleteAlert(id: number) {
     const client = getPrismaClient()
-    return await client.alert.delete({
-      where: { id }
-    })
+    return client.alert.delete({
+        where: {id}
+    });
   },
 
   // Search alerts by call sign
@@ -134,19 +134,19 @@ export const spotsService = {
   // Get all spots
   async getAllSpots() {
     const client = getPrismaClient()
-    return await client.spot.findMany({
-      orderBy: {
-        datetime: 'desc'
-      }
-    })
+    return client.spot.findMany({
+        orderBy: {
+            datetime: 'desc'
+        }
+    });
   },
 
   // Get a specific spot by ID
   async getSpotById(id: number) {
     const client = getPrismaClient()
-    return await client.spot.findUnique({
-      where: { id }
-    })
+    return client.spot.findUnique({
+        where: {id}
+    });
   },
 
   // Create a new spot
@@ -172,12 +172,12 @@ export const spotsService = {
 
     const nextId = maxSpot ? maxSpot.id + 1 : 1
 
-    return await client.spot.create({
-      data: {
-        id: nextId,
-        ...data
-      }
-    })
+    return client.spot.create({
+        data: {
+            id: nextId,
+            ...data
+        }
+    });
   },
 
   // Update a spot
@@ -190,44 +190,44 @@ export const spotsService = {
     spotter?: string
   }) {
     const client = getPrismaClient()
-    return await client.spot.update({
-      where: { id },
-      data
-    })
+    return client.spot.update({
+        where: {id},
+        data
+    });
   },
 
   // Delete a spot
   async deleteSpot(id: number) {
     const client = getPrismaClient()
-    return await client.spot.delete({
-      where: { id }
-    })
+    return client.spot.delete({
+        where: {id}
+    });
   },
 
   // Search spots by call sign
   async searchByCall(call: string) {
     const client = getPrismaClient()
-    return await client.spot.findMany({
-      where: {
-        call: {
-          contains: call
+    return client.spot.findMany({
+        where: {
+            call: {
+                contains: call
+            }
+        },
+        orderBy: {
+            datetime: 'desc'
         }
-      },
-      orderBy: {
-        datetime: 'desc'
-      }
-    })
+    });
   },
 
   // Get recent spots (last N spots)
   async getRecentSpots(limit: number = 10) {
     const client = getPrismaClient()
-    return await client.spot.findMany({
-      take: limit,
-      orderBy: {
-        datetime: 'desc'
-      }
-    })
+    return client.spot.findMany({
+        take: limit,
+        orderBy: {
+            datetime: 'desc'
+        }
+    });
   }
 }
 
@@ -236,17 +236,17 @@ export const summitsService = {
   // Get all summits
   async getAllSummits() {
     const client = getPrismaClient()
-    return await client.summit.findMany({
-      orderBy: {
-        wotaid: 'asc'
-      }
-    })
+    return client.summit.findMany({
+        orderBy: {
+            wotaid: 'asc'
+        }
+    });
   },
 
   // Get summit by WOTA ID
   async getByWotaId(wotaid: number) {
     const client = getPrismaClient()
-    return await client.summit.findUnique({
+    return client.summit.findUnique({
       where: { wotaid }
     })
   },
@@ -254,7 +254,7 @@ export const summitsService = {
   // Get summits by SOTA ID
   async getBySotaId(sotaid: number) {
     const client = getPrismaClient()
-    return await client.summit.findMany({
+    return client.summit.findMany({
       where: { sotaid }
     })
   },
@@ -262,7 +262,7 @@ export const summitsService = {
   // Search summits by name (partial match)
   async searchByName(name: string) {
     const client = getPrismaClient()
-    return await client.summit.findMany({
+    return client.summit.findMany({
       where: {
         name: {
           contains: name
@@ -278,7 +278,7 @@ export const summitsService = {
   // Note: MySQL string comparisons are case-insensitive by default with latin1_swedish_ci collation
   async searchByNameInsensitive(name: string) {
     const client = getPrismaClient()
-    return await client.summit.findMany({
+    return client.summit.findMany({
       where: {
         name: {
           contains: name
@@ -293,7 +293,7 @@ export const summitsService = {
   // Get summits by book
   async getByBook(book: string) {
     const client = getPrismaClient()
-    return await client.summit.findMany({
+    return client.summit.findMany({
       where: { book },
       orderBy: {
         wotaid: 'asc'
@@ -315,7 +315,7 @@ export const summitsService = {
     gridid?: string | null
   }) {
     const client = getPrismaClient()
-    return await client.summit.create({
+    return client.summit.create({
       data
     })
   },
@@ -333,24 +333,16 @@ export const summitsService = {
     gridid?: string | null
   }) {
     const client = getPrismaClient()
-    return await client.summit.update({
+    return client.summit.update({
       where: { wotaid },
       data
-    })
-  },
-
-  // Delete a summit
-  async deleteSummit(wotaid: number) {
-    const client = getPrismaClient()
-    return await client.summit.delete({
-      where: { wotaid }
     })
   },
 
   // Get summits with height greater than specified value
   async getByMinHeight(minHeight: number) {
     const client = getPrismaClient()
-    return await client.summit.findMany({
+    return client.summit.findMany({
       where: {
         height: {
           gte: minHeight
