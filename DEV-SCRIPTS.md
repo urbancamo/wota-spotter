@@ -8,6 +8,23 @@ This project includes bash scripts to easily start and stop all development serv
 - ngrok installed ([download here](https://ngrok.com/download))
 - All npm dependencies installed (`npm install`)
 
+## Building the Application
+
+Before running the development environment for the first time, or after making changes to the Prisma schema, you need to build the application:
+
+```bash
+# Generate Prisma client from schema
+npx prisma generate
+
+# Install dependencies (if not already done)
+npm install
+```
+
+The `prisma generate` command creates the Prisma client based on your database schema defined in `prisma/schema.prisma`. This step is required whenever you:
+- Clone the repository for the first time
+- Make changes to the Prisma schema
+- Update Prisma dependencies
+
 ## Starting Development Environment
 
 To start all services (API server, frontend, and ngrok):

@@ -1,0 +1,23 @@
+// CMS Database Schema for User Authentication
+// This schema connects to the CMS database
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/cms-client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("CMS_DATABASE_URL")
+}
+
+// Add your CMS database models here for user authentication
+// Example:
+// model User {
+//   id        Int      @id @default(autoincrement())
+//   email     String   @unique
+//   password  String
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+//   @@map("users")
+// }
