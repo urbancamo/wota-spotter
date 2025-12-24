@@ -5,6 +5,7 @@ import { VantResolver } from '@vant/auto-import-resolver'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/spotter/',
   plugins: [
     vue(),
     Components({
@@ -15,8 +16,8 @@ export default defineConfig({
     host: true,
     port: 3000,
     allowedHosts: [
-      '.ngrok-free.dev',
-      '.ngrok.io',
+      '.m5tea.uk',
+      '.vault',
       'localhost',
     ],
     proxy: {
