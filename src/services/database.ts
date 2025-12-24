@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/wota-client'
 
 // Create a singleton instance of PrismaClient
 let prisma: PrismaClient
