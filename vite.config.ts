@@ -21,9 +21,10 @@ export default defineConfig({
       'localhost',
     ],
     proxy: {
-      '/api': {
+      '/spotter/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/spotter\/api/, '/api'),
       },
     },
   },

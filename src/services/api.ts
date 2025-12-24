@@ -1,6 +1,6 @@
 // API client for frontend to communicate with backend
 
-const API_BASE = '/api'
+const API_BASE = '/spotter/api'
 
 interface Summit {
   wotaid: number  // Display as LDW-XXX (<=214) or LDO-XXX (>214, subtract 214) format (e.g., LDW-001, 215→LDO-001)
