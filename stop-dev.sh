@@ -12,7 +12,6 @@ NC='\033[0m' # No Color
 # PID file locations
 API_PID_FILE=".api.pid"
 FRONTEND_PID_FILE=".frontend.pid"
-NGROK_PID_FILE=".ngrok.pid"
 
 echo -e "${YELLOW}Stopping WOTA Spotter development services...${NC}\n"
 
@@ -46,21 +45,6 @@ if [ -f "$FRONTEND_PID_FILE" ]; then
   rm "$FRONTEND_PID_FILE"
 else
   echo -e "${YELLOW}No frontend PID file found${NC}"
-fi
-
-# Stop ngrok
-if [ -f "$NGROK_PID_FILE" ]; then
-  NGROK_PID=$(cat "$NGROK_PID_FILE")
-  if kill -0 "$NGROK_PID" 2>/dev/null; then
-    echo -e "${BLUE}Stopping ngrok (PID: $NGROK_PID)${NC}"
-    kill "$NGROK_PID"
-    ((STOPPED_COUNT++))
-  else
-    echo -e "${YELLOW}ngrok is not running${NC}"
-  fi
-  rm "$NGROK_PID_FILE"
-else
-  echo -e "${YELLOW}No ngrok PID file found${NC}"
 fi
 
 echo ""
