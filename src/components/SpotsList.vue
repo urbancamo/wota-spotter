@@ -934,7 +934,7 @@ async function submitSpot() {
 }
 
 .spot-time {
-  font-size: 0.75em;
+  font-size: 1em;
   color: #969799;
   font-weight: normal;
 }
