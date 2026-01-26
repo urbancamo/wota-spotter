@@ -64,7 +64,7 @@ describe('Spots Database Tests', () => {
       } catch (error) {
         // We expect an error here
         expect(error).toBeDefined()
-        console.log('Successfully caught error for invalid table:', error.message)
+        console.log('Successfully caught error for invalid table:', (error as Error).message)
       }
     })
 
@@ -76,7 +76,7 @@ describe('Spots Database Tests', () => {
         expect(true).toBe(false)
       } catch (error) {
         expect(error).toBeDefined()
-        console.log('Successfully caught error for malformed query:', error.message)
+        console.log('Successfully caught error for malformed query:', (error as Error).message)
       }
     })
 
@@ -84,14 +84,13 @@ describe('Spots Database Tests', () => {
       try {
         // @ts-expect-error - intentionally passing incomplete data
         await spotsService.createSpot({
-          id: 999999,
           call: 'TEST'
           // Missing required fields: datetime, wotaid, freqmode, comment, spotter
         })
         expect(true).toBe(false)
       } catch (error) {
         expect(error).toBeDefined()
-        console.log('Successfully caught error for missing required fields:', error.message)
+        console.log('Successfully caught error for missing required fields:', (error as Error).message)
       }
     })
 
@@ -103,7 +102,7 @@ describe('Spots Database Tests', () => {
         expect(true).toBe(false)
       } catch (error) {
         expect(error).toBeDefined()
-        console.log('Successfully caught error for updating non-existent spot:', error.message)
+        console.log('Successfully caught error for updating non-existent spot:', (error as Error).message)
       }
     })
 
@@ -113,7 +112,7 @@ describe('Spots Database Tests', () => {
         expect(true).toBe(false)
       } catch (error) {
         expect(error).toBeDefined()
-        console.log('Successfully caught error for deleting non-existent spot:', error.message)
+        console.log('Successfully caught error for deleting non-existent spot:', (error as Error).message)
       }
     })
 
@@ -129,7 +128,7 @@ describe('Spots Database Tests', () => {
     it('should validate data types on read', async () => {
       const spots = await spotsService.getAllSpots()
       if (spots.length > 0) {
-        const firstSpot = spots[0]
+        const firstSpot = spots[0]!
         expect(typeof firstSpot.id).toBe('number')
         expect(firstSpot.datetime).toBeInstanceOf(Date)
         expect(typeof firstSpot.call).toBe('string')

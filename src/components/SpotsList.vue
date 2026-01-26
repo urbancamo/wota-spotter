@@ -322,8 +322,8 @@ async function loadSpots(silent = false) {
 }
 
 // Check if a spot is within the last 30 minutes
-function isSpotRecent(datetime: string): boolean {
-  const spotDate = new Date(datetime)
+function isSpotRecent(datetime: Date | string): boolean {
+  const spotDate = datetime instanceof Date ? datetime : new Date(datetime)
   const now = new Date()
   const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000)
   return spotDate >= thirtyMinutesAgo
@@ -597,7 +597,7 @@ async function submitSpot() {
     </van-nav-bar>
 
     <!-- Spots List -->
-    <van-pull-refresh v-model="loading" @refresh="refreshNow" loading-text="Loading spots...">
+    <van-pull-refresh :model-value="loading" @update:model-value="loading = $event" @refresh="refreshNow" loading-text="Loading spots...">
       <van-list>
         <van-cell
           v-for="spot in spots"
@@ -663,7 +663,7 @@ async function submitSpot() {
     </van-pull-refresh>
 
     <!-- Create Spot Form Popup -->
-    <van-popup v-model:show="showForm" position="bottom" :style="{ height: '85%' }">
+    <van-popup :show="showForm" @update:show="showForm = $event" position="bottom" :style="{ height: '85%' }">
       <div class="form-container">
         <van-nav-bar
           title="Create Spot"
@@ -821,7 +821,7 @@ async function submitSpot() {
     </van-popup>
 
     <!-- Summit Picker Popup -->
-    <van-popup v-model:show="showSummitPicker" position="bottom" :style="{ height: '80%' }">
+    <van-popup :show="showSummitPicker" @update:show="showSummitPicker = $event" position="bottom" :style="{ height: '80%' }">
       <div class="picker-container">
         <van-nav-bar
           title="Select Summit"
@@ -844,8 +844,8 @@ async function submitSpot() {
           >
             <template #label>
               <div class="summit-details">
-                <van-tag type="primary" size="small">{{ formatWotaId(summit.wotaid) }}</van-tag>
-                <van-tag v-if="summit.sotaid" type="success" size="small">
+                <van-tag type="primary" size="medium">{{ formatWotaId(summit.wotaid) }}</van-tag>
+                <van-tag v-if="summit.sotaid" type="success" size="medium">
                   {{ formatSotaId(summit.sotaid) }}
                 </van-tag>
               </div>
@@ -861,7 +861,7 @@ async function submitSpot() {
     </van-popup>
 
     <!-- Mode Picker Popup -->
-    <van-popup v-model:show="showModePicker" position="bottom" :style="{ height: '60%' }">
+    <van-popup :show="showModePicker" @update:show="showModePicker = $event" position="bottom" :style="{ height: '60%' }">
       <div class="picker-container">
         <van-nav-bar
           title="Select Mode"
@@ -1027,10 +1027,6 @@ async function submitSpot() {
   opacity: 0.6;
 }
 
-.gps-loading {
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -1038,10 +1034,6 @@ async function submitSpot() {
   50% {
     opacity: 0.4;
   }
-}
-
-.history-field :deep(.van-field__label) {
-  color: #969799;
 }
 
 .history-tags {

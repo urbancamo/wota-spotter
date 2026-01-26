@@ -175,8 +175,8 @@ async function loadAlerts(silent = false) {
 }
 
 // Check if an alert is after now and before midnight
-function isAlertRecent(datetime: string): boolean {
-  const alertDate = new Date(datetime)
+function isAlertRecent(datetime: Date | string): boolean {
+  const alertDate = datetime instanceof Date ? datetime : new Date(datetime)
   const now = new Date()
   const midnight = new Date(now)
   midnight.setHours(23, 59, 59, 999) // End of today
@@ -356,7 +356,7 @@ const displayDate = computed({
     }
     // Handle both dd/mm/yyyy and d/m/yyyy formats
     const parts = value.split('/')
-    if (parts.length === 3) {
+    if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
       const day = parts[0].padStart(2, '0')
       const month = parts[1].padStart(2, '0')
       const year = parts[2]
@@ -390,10 +390,16 @@ function onDateConfirm(value: Date) {
   saveFormData()
 }
 
-function onTimeConfirm(value: string) {
-  formData.value.activationTime = value
+function onTimeConfirm(value: string[]) {
+  formData.value.activationTime = value.join(':')
   showTimePicker.value = false
   saveFormData()
+}
+
+// Convert time string "HH:mm" to array ["HH", "mm"] for van-time-picker
+function timeStringToArray(time: string): string[] {
+  if (!time) return []
+  return time.split(':')
 }
 
 async function useGpsLocation() {
@@ -618,7 +624,7 @@ async function deleteAlert(event: Event, alertId: number) {
     </van-nav-bar>
 
     <!-- Alerts List -->
-    <van-pull-refresh v-model="loading" @refresh="refreshNow" loading-text="Loading alerts...">
+    <van-pull-refresh :model-value="loading" @update:model-value="loading = $event" @refresh="refreshNow" loading-text="Loading alerts...">
       <van-list>
         <van-cell
           v-for="alert in alerts"
@@ -694,7 +700,7 @@ async function deleteAlert(event: Event, alertId: number) {
     </van-pull-refresh>
 
     <!-- Create Alert Form Popup -->
-    <van-popup v-model:show="showForm" position="bottom" :style="{ height: '85%' }">
+    <van-popup :show="showForm" @update:show="showForm = $event" position="bottom" :style="{ height: '85%' }">
       <div class="form-container">
         <van-nav-bar
           title="Create Alert"
@@ -959,7 +965,7 @@ async function deleteAlert(event: Event, alertId: number) {
     </van-popup>
 
     <!-- Summit Picker Popup -->
-    <van-popup v-model:show="showSummitPicker" position="bottom" :style="{ height: '80%' }">
+    <van-popup :show="showSummitPicker" @update:show="showSummitPicker = $event" position="bottom" :style="{ height: '80%' }">
       <div class="picker-container">
         <van-nav-bar
           title="Select Summit"
@@ -982,8 +988,8 @@ async function deleteAlert(event: Event, alertId: number) {
           >
             <template #label>
               <div class="summit-details">
-                <van-tag type="primary" size="small">{{ formatWotaId(summit.wotaid) }}</van-tag>
-                <van-tag v-if="summit.sotaid" type="success" size="small">
+                <van-tag type="primary" size="medium">{{ formatWotaId(summit.wotaid) }}</van-tag>
+                <van-tag v-if="summit.sotaid" type="success" size="medium">
                   {{ formatSotaId(summit.sotaid) }}
                 </van-tag>
               </div>
@@ -999,7 +1005,7 @@ async function deleteAlert(event: Event, alertId: number) {
     </van-popup>
 
     <!-- Date Picker Popup -->
-    <van-popup v-model:show="showDatePicker" position="bottom" :style="{ height: '50%' }">
+    <van-popup :show="showDatePicker" @update:show="showDatePicker = $event" position="bottom" :style="{ height: '50%' }">
       <van-date-picker
         title="Select Date"
         :min-date="new Date()"
@@ -1009,10 +1015,10 @@ async function deleteAlert(event: Event, alertId: number) {
     </van-popup>
 
     <!-- Time Picker Popup -->
-    <van-popup v-model:show="showTimePicker" position="bottom" :style="{ height: '50%' }">
+    <van-popup :show="showTimePicker" @update:show="showTimePicker = $event" position="bottom" :style="{ height: '50%' }">
       <van-time-picker
         title="Select Time (UTC)"
-        :model-value="formData.activationTime"
+        :model-value="timeStringToArray(formData.activationTime)"
         @confirm="onTimeConfirm"
         @cancel="showTimePicker = false"
       />
@@ -1181,10 +1187,6 @@ async function deleteAlert(event: Event, alertId: number) {
   }
 }
 
-.history-field :deep(.van-field__label) {
-  color: #969799;
-}
-
 .history-tags {
   display: flex;
   gap: 0.5em;
@@ -1218,9 +1220,6 @@ async function deleteAlert(event: Event, alertId: number) {
   border-color: #1989fa;
 }
 
-.shortcuts-field :deep(.van-field__label) {
-  color: #969799;
-}
 
 .shortcut-buttons {
   display: flex;

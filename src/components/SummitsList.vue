@@ -6,6 +6,7 @@ import { formatSotaId, formatWotaId, formatHeight, formatDate } from '../utils/f
 import { gridRefToLatLon } from '../utils/gridReference'
 import { getCurrentPosition, formatDistance } from '../utils/geolocation'
 import { toMaidenhead } from '../utils/maidenhead'
+import { toWABSquare } from '../utils/wab'
 import LatLon from 'geodesy/latlon-spherical.js'
 
 const emit = defineEmits<{
@@ -310,7 +311,7 @@ function onSummitClick(summit: Summit) {
     </div>
 
     <!-- Summits List -->
-    <van-pull-refresh v-model="loading" @refresh="loadSummits" loading-text="Loading summits...">
+    <van-pull-refresh :model-value="loading" @update:model-value="loading = $event" @refresh="loadSummits" loading-text="Loading summits...">
       <van-list>
         <van-cell
           v-for="summit in currentList"
@@ -354,10 +355,17 @@ function onSummitClick(summit: Summit) {
               >
                 {{ toMaidenhead(summit.lat, summit.lon) }}
               </van-tag>
+              <van-tag
+                v-if="toWABSquare(summit.reference)"
+                type="danger"
+                size="medium"
+              >
+                {{ toWABSquare(summit.reference) }}
+              </van-tag>
             </div>
             <div class="summit-meta">
-              <span v-if="activeTab === 2 && summit.distance !== undefined">
-                {{ formatDistance(summit.distance) }} •
+              <span v-if="activeTab === 2 && 'distance' in summit && (summit as any).distance !== undefined">
+                {{ formatDistance((summit as any).distance) }} •
               </span>
               <span>{{ formatHeight(summit.height) }}</span>
               <span v-if="summit.last_act_by">
