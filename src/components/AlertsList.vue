@@ -172,10 +172,26 @@ async function loadAlerts(silent = false) {
     // Filter alerts to only show those in the future
     const now = new Date()
 
-    alerts.value = allAlerts.filter(alert => {
+    const futureAlerts = allAlerts.filter(alert => {
       const alertDate = new Date(alert.datetime)
       return alertDate >= now
     })
+
+    // Deduplicate alerts - keep only the latest when call, wotaid, and freqmode match
+    // For duplicates, keep the one with the highest ID (most recently posted)
+    const alertsByKey = new Map<string, typeof futureAlerts[0]>()
+    for (const alert of futureAlerts) {
+      const key = `${alert.call}|${alert.wotaid}|${alert.freqmode}`
+      const existing = alertsByKey.get(key)
+      if (!existing || alert.id > existing.id) {
+        alertsByKey.set(key, alert)
+      }
+    }
+
+    // Convert back to array and sort by datetime ASC for display
+    alerts.value = Array.from(alertsByKey.values()).sort((a, b) =>
+      new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+    )
 
     if (!silent) {
       showToast({

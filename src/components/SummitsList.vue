@@ -517,7 +517,8 @@ watch(showDetailPopup, async (isOpen) => {
 
     <!-- Summit Detail Popup (outside scaled container) -->
     <van-popup
-      v-model:show="showDetailPopup"
+      :show="showDetailPopup"
+      @update:show="showDetailPopup = $event"
       position="bottom"
       :style="{ height: '90%' }"
       round
@@ -756,7 +757,7 @@ watch(showDetailPopup, async (isOpen) => {
   margin-bottom: 1em;
 }
 
-.popup-actions .van-button {
+.popup-actions {
   flex: 1;
 }
 </style>
