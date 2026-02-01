@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import { apiClient, type Summit } from '../services/api'
 import { formatSotaId, formatWotaId, formatHeight, formatDate } from '../utils/formatters'
@@ -9,9 +9,32 @@ import { toMaidenhead } from '../utils/maidenhead'
 import { toWABSquare } from '../utils/wab'
 import LatLon from 'geodesy/latlon-spherical.js'
 
+// OpenLayers imports
+import Map from 'ol/Map'
+import View from 'ol/View'
+import TileLayer from 'ol/layer/Tile'
+import XYZ from 'ol/source/XYZ'
+import VectorLayer from 'ol/layer/Vector'
+import VectorSource from 'ol/source/Vector'
+import { Feature } from 'ol'
+import { Point } from 'ol/geom'
+import { Style, Circle, Fill, Stroke } from 'ol/style'
+import { fromLonLat } from 'ol/proj'
+import { FullScreen } from 'ol/control'
+import 'ol/ol.css'
+
 const emit = defineEmits<{
   'create-spot': [summit: Summit]
+  'create-alert': [summit: Summit]
 }>()
+
+// Summit detail popup state
+const showDetailPopup = ref<boolean>(false)
+const selectedSummit = ref<Summit | null>(null)
+const mapContainer = ref<HTMLElement | null>(null)
+let mapInstance: Map | null = null
+let fullscreenControl: FullScreen | null = null
+const isMapFullscreen = ref(false)
 
 const summits = ref<Summit[]>([])
 const searchValue = ref('')
@@ -262,17 +285,119 @@ function onGridRefClick(event: Event, gridRef: string) {
 }
 
 function onSummitClick(summit: Summit) {
-  // Emit event to create a spot for this summit
-  emit('create-spot', summit)
+  // Show detail popup for this summit
+  selectedSummit.value = summit
+  showDetailPopup.value = true
 }
+
+// Initialize OpenLayers map
+function initMap() {
+  if (!mapContainer.value || !selectedSummit.value) return
+
+  // Clean up existing map
+  if (mapInstance) {
+    mapInstance.setTarget(undefined)
+    mapInstance = null
+  }
+
+  const summit = selectedSummit.value
+  if (!summit.lat || !summit.lon) return
+
+  const center = fromLonLat([summit.lon, summit.lat])
+
+  // Thunderforest Landscape tiles
+  const tileLayer = new TileLayer({
+    source: new XYZ({
+      url: 'https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey=a5dd6a2f1c934394bce6b0fb077203eb',
+      attributions: '&copy; <a href="https://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    })
+  })
+
+  // Summit marker
+  const markerFeature = new Feature({
+    geometry: new Point(center)
+  })
+  markerFeature.setStyle(new Style({
+    image: new Circle({
+      radius: 8,
+      fill: new Fill({ color: '#e74c3c' }),
+      stroke: new Stroke({ color: '#fff', width: 2 })
+    })
+  }))
+
+  const vectorLayer = new VectorLayer({
+    source: new VectorSource({
+      features: [markerFeature]
+    })
+  })
+
+  // Create map
+  mapInstance = new Map({
+    target: mapContainer.value,
+    layers: [tileLayer, vectorLayer],
+    view: new View({
+      center: center,
+      zoom: 14
+    })
+  })
+
+  // Add fullscreen control
+  fullscreenControl = new FullScreen()
+  mapInstance.addControl(fullscreenControl)
+
+  // Listen for fullscreen changes
+  fullscreenControl.on('enterfullscreen', () => {
+    isMapFullscreen.value = true
+  })
+  fullscreenControl.on('leavefullscreen', () => {
+    isMapFullscreen.value = false
+  })
+}
+
+// Close detail popup
+function closeDetailPopup() {
+  showDetailPopup.value = false
+  selectedSummit.value = null
+
+  // Clean up map
+  if (mapInstance) {
+    mapInstance.setTarget(undefined)
+    mapInstance = null
+  }
+}
+
+// Create spot from popup
+function createSpotFromPopup() {
+  if (selectedSummit.value) {
+    emit('create-spot', selectedSummit.value)
+    closeDetailPopup()
+  }
+}
+
+// Create alert from popup
+function createAlertFromPopup() {
+  if (selectedSummit.value) {
+    emit('create-alert', selectedSummit.value)
+    closeDetailPopup()
+  }
+}
+
+// Watch for popup opening to initialize map
+watch(showDetailPopup, async (isOpen) => {
+  if (isOpen) {
+    await nextTick()
+    initMap()
+  }
+})
 </script>
 
 <template>
-  <div class="summits-page" :style="{
-    transform: `scale(${zoomScale})`,
-    transformOrigin: 'top left',
-    width: `${100 / zoomScale}%`
-  }">
+  <div class="summits-container">
+    <div class="summits-page" :style="{
+      transform: `scale(${zoomScale})`,
+      transformOrigin: 'top left',
+      width: `${100 / zoomScale}%`
+    }">
     <!-- Navigation Bar -->
     <van-nav-bar title="WOTA Summits" fixed placeholder>
       <template #right>
@@ -388,10 +513,112 @@ function onSummitClick(summit: Summit) {
         />
       </van-list>
     </van-pull-refresh>
+    </div>
+
+    <!-- Summit Detail Popup (outside scaled container) -->
+    <van-popup
+      v-model:show="showDetailPopup"
+      position="bottom"
+      :style="{ height: '90%' }"
+      round
+      closeable
+      @close="closeDetailPopup"
+    >
+      <div class="summit-detail-popup" v-if="selectedSummit">
+        <h2 class="popup-title">{{ selectedSummit.name }}</h2>
+
+        <!-- Action Buttons -->
+        <div class="popup-actions">
+          <van-button
+            type="primary"
+            size="large"
+            @click="createSpotFromPopup"
+          >
+            Create Spot
+          </van-button>
+          <van-button
+            type="warning"
+            size="large"
+            @click="createAlertFromPopup"
+          >
+            Create Alert
+          </van-button>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-row">
+            <span class="detail-label">WOTA Ref:</span>
+            <van-tag
+              type="primary"
+              size="medium"
+              class="clickable-tag"
+              @click="onWotaClick($event, selectedSummit.wotaid)"
+            >
+              {{ formatWotaId(selectedSummit.wotaid) }}
+            </van-tag>
+          </div>
+
+          <div class="detail-row" v-if="selectedSummit.sotaid">
+            <span class="detail-label">SOTA Ref:</span>
+            <van-tag
+              type="success"
+              size="medium"
+              class="clickable-tag"
+              @click="onSotaClick($event, selectedSummit.sotaid)"
+            >
+              {{ formatSotaId(selectedSummit.sotaid) }}
+            </van-tag>
+          </div>
+
+          <div class="detail-row">
+            <span class="detail-label">Height:</span>
+            <span class="detail-value">{{ formatHeight(selectedSummit.height) }}</span>
+          </div>
+
+          <div class="detail-row">
+            <span class="detail-label">Grid Ref:</span>
+            <van-tag
+              type="default"
+              size="medium"
+              class="clickable-tag"
+              @click="onGridRefClick($event, selectedSummit.reference)"
+            >
+              {{ selectedSummit.reference }}
+            </van-tag>
+          </div>
+
+          <div class="detail-row" v-if="selectedSummit.lat && selectedSummit.lon">
+            <span class="detail-label">Maidenhead:</span>
+            <van-tag type="warning" size="medium">
+              {{ toMaidenhead(selectedSummit.lat, selectedSummit.lon) }}
+            </van-tag>
+          </div>
+
+          <div class="detail-row" v-if="toWABSquare(selectedSummit.reference)">
+            <span class="detail-label">WAB Square:</span>
+            <van-tag type="danger" size="medium">
+              {{ toWABSquare(selectedSummit.reference) }}
+            </van-tag>
+          </div>
+        </div>
+
+        <!-- Map Section -->
+        <div class="map-section" v-if="selectedSummit.lat && selectedSummit.lon">
+          <h3 class="section-title">Location</h3>
+          <div ref="mapContainer" class="map-container"></div>
+        </div>
+
+      </div>
+    </van-popup>
   </div>
 </template>
 
 <style scoped>
+.summits-container {
+  min-height: 100vh;
+  background-color: #f7f8fa;
+}
+
 .summits-page {
   min-height: 100vh;
   background-color: #f7f8fa;
@@ -449,5 +676,87 @@ function onSummitClick(summit: Summit) {
 
 .callsign-link:active {
   opacity: 0.7;
+}
+
+/* Summit Detail Popup Styles */
+.summit-detail-popup {
+  padding: 1em;
+  padding-top: 2.5em;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-title {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin: 0 0 1em 0;
+  text-align: center;
+  color: #323233;
+}
+
+.detail-section {
+  background: #f7f8fa;
+  border-radius: 0.5em;
+  padding: 0.75em;
+  margin-bottom: 1em;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  padding: 0.375em 0;
+  border-bottom: 1px solid #ebedf0;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-size: 0.875em;
+  color: #969799;
+  width: 6em;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  font-size: 0.875em;
+  color: #323233;
+}
+
+.section-title {
+  font-size: 1em;
+  font-weight: 600;
+  margin: 0 0 0.5em 0;
+  color: #323233;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+/* Map Section */
+.map-section {
+  margin-bottom: 1em;
+}
+
+.map-container {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 0.5em;
+  overflow: hidden;
+  border: 1px solid #ebedf0;
+}
+
+/* Popup Actions */
+.popup-actions {
+  display: flex;
+  gap: 0.75em;
+  margin-bottom: 1em;
+}
+
+.popup-actions .van-button {
+  flex: 1;
 }
 </style>

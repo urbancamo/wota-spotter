@@ -6,21 +6,37 @@ import AlertsList from './components/AlertsList.vue'
 import type { Summit } from './services/api'
 
 const activePage = ref(0) // Default to Spots page
-const preselectedSummit = ref<Summit | null>(null)
+const preselectedSpotSummit = ref<Summit | null>(null)
+const preselectedAlertSummit = ref<Summit | null>(null)
 const spotListKey = ref(0)
+const alertListKey = ref(0)
 
 function onCreateSpotForSummit(summit: Summit) {
   // Set the preselected summit
-  preselectedSummit.value = summit
+  preselectedSpotSummit.value = summit
   // Increment key to force SpotsList to recreate and pick up the new summit
   spotListKey.value++
   // Switch to Spots page
   activePage.value = 0
 }
 
+function onCreateAlertForSummit(summit: Summit) {
+  // Set the preselected summit
+  preselectedAlertSummit.value = summit
+  // Increment key to force AlertsList to recreate and pick up the new summit
+  alertListKey.value++
+  // Switch to Alerts page
+  activePage.value = 1
+}
+
 function onSpotFormOpened() {
   // Clear the preselected summit after it's been used
-  preselectedSummit.value = null
+  preselectedSpotSummit.value = null
+}
+
+function onAlertFormOpened() {
+  // Clear the preselected summit after it's been used
+  preselectedAlertSummit.value = null
 }
 </script>
 
@@ -31,15 +47,19 @@ function onSpotFormOpened() {
       <SpotsList
         v-if="activePage === 0"
         :key="spotListKey"
-        :preselected-summit="preselectedSummit"
+        :preselected-summit="preselectedSpotSummit"
         @spot-form-opened="onSpotFormOpened"
       />
       <AlertsList
         v-if="activePage === 1"
+        :key="alertListKey"
+        :preselected-summit="preselectedAlertSummit"
+        @alert-form-opened="onAlertFormOpened"
       />
       <SummitsList
         v-if="activePage === 2"
         @create-spot="onCreateSpotForSummit"
+        @create-alert="onCreateAlertForSummit"
       />
     </div>
 

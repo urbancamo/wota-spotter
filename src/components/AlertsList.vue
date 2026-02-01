@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { showToast, showLoadingToast, closeToast, showSuccessToast } from 'vant'
 import { apiClient, type Alert, type Summit } from '../services/api'
 import { formatWotaId, formatSotaId, formatDateTime } from '../utils/formatters'
 import { gridRefToLatLon } from '../utils/gridReference'
 import { getCurrentPosition, findClosestSummit } from '../utils/geolocation'
+
+const props = defineProps<{
+  preselectedSummit?: Summit | null
+}>()
+
+const emit = defineEmits<{
+  'alert-form-opened': []
+}>()
 
 const alerts = ref<Alert[]>([])
 const loading = ref(false)
@@ -135,6 +143,20 @@ onUnmounted(() => {
     clearInterval(countdownInterval)
   }
 })
+
+// Watch for preselected summit from parent
+watch(() => props.preselectedSummit, (summit) => {
+  if (summit) {
+    // Load any saved form data from localStorage
+    loadFormData()
+    // Override the summit field with the preselected one
+    formData.value.summit = summit
+    // Open the form
+    showForm.value = true
+    // Notify parent that we've handled the preselection
+    emit('alert-form-opened')
+  }
+}, { immediate: true })
 
 async function refreshNow() {
   await loadAlerts(true)
